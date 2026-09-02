@@ -2,10 +2,18 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
+import PeterAccountGateway from './components/PeterAccountGateway';
 import './styles.css';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.petertecnet.com.br/api';
+const APP_SLUG = import.meta.env.VITE_APP_SLUG || 'laora';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter><App /></BrowserRouter>
+    <BrowserRouter>
+      <PeterAccountGateway apiBaseUrl={API_BASE_URL} appSlug={APP_SLUG}>
+        <App />
+      </PeterAccountGateway>
+    </BrowserRouter>
   </React.StrictMode>
 );
