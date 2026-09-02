@@ -1,16 +1,22 @@
 import axios from 'axios';
 
+const appSlug = String(import.meta.env.VITE_APP_SLUG || 'laora').trim().toLowerCase();
+const apiRoot = String(import.meta.env.VITE_API_URL || 'https://api.petertecnet.com.br/api').replace(/\/+$/, '');
+const apiV1BaseUrl = `${apiRoot}/v1/apps/${encodeURIComponent(appSlug)}`;
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://api.petertecnet.com.br/api',
+  baseURL: apiV1BaseUrl,
   timeout: 15000,
   headers: {
     Accept: 'application/json',
-    'X-Peter-App': import.meta.env.VITE_APP_SLUG || 'laora',
+    'X-Peter-App': appSlug,
   },
 });
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
+  config.headers = config.headers || {};
+  config.headers['X-Peter-App'] = appSlug;
   if (token) config.headers.Authorization = `Bearer ${token}`;
   config.headers['X-Frontend-Page'] = window.location.pathname;
   return config;
