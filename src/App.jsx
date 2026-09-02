@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FiHeart, FiMessageCircle, FiUser, FiX, FiShield, FiMapPin, FiSparkles } from 'react-icons/fi';
+import { FiHeart, FiMessageCircle, FiUser, FiX, FiShield, FiMapPin, FiStar } from 'react-icons/fi';
 
 const profiles = [
   { id: 1, name: 'Marina', age: 27, city: 'Goiânia', bio: 'Música, viagens e café sem pressa.', tags: ['Música', 'Viagens', 'Café'] },
@@ -29,7 +29,7 @@ export default function App() {
 
       <main>
         <section className="hero-copy">
-          <span className="eyebrow"><FiSparkles /> Conexões reais, sem mistério</span>
+          <span className="eyebrow"><FiStar /> Conexões reais, sem mistério</span>
           <h1>Conheça pessoas.<br/><em>Veja quando der match.</em></h1>
           <p>No Laora, um match recíproco é seu. Nada de esconder quem também curtiu você atrás de uma assinatura.</p>
         </section>
@@ -62,7 +62,7 @@ export default function App() {
       </main>
 
       <nav className="bottom-nav">
-        <button className="active"><FiSparkles/><span>Descobrir</span></button>
+        <button className="active"><FiStar/><span>Descobrir</span></button>
         <button><FiHeart/><span>Matches</span><b>{matches.length}</b></button>
         <button><FiMessageCircle/><span>Conversas</span></button>
         <button><FiUser/><span>Perfil</span></button>
