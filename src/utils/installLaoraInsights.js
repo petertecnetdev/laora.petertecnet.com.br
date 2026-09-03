@@ -38,7 +38,10 @@ function render() {
     return;
   }
 
+  const signature = JSON.stringify(data);
   let host = document.getElementById(HOST_ID);
+  if (host?.dataset.insightSignature === signature) return;
+
   if (!host) {
     host = document.createElement('section');
     host.id = HOST_ID;
@@ -47,7 +50,8 @@ function render() {
     grid.insertAdjacentElement('beforebegin', host);
   }
 
-  host.innerHTML = '';
+  host.dataset.insightSignature = signature;
+  host.replaceChildren();
   const chart = document.createElement('peter-insight-chart');
   chart.setAttribute('type', 'bar');
   chart.setAttribute('title', 'Resumo das suas conexões');
