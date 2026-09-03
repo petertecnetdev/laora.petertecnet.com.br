@@ -1,0 +1,27 @@
+:root {
+  --coral: var(--peter-brand-primary, #ff6d78) !important;
+  --violet: var(--peter-brand-secondary, #8b5cf6) !important;
+  --blue: var(--peter-brand-accent, #4aa8ff) !important;
+}
+
+.p-mark,
+.laora-mark {
+  background-image: var(--peter-brand-logo-url, linear-gradient(135deg, var(--coral), var(--violet), var(--blue))) !important;
+  background-size: contain !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+}
+
+.p-mark[data-peter-branding-applied="true"] i,
+.laora-mark[data-peter-branding-applied="true"] i {
+  display: none !important;
+}
+
+.p-primary,
+.primary-button,
+.round-button.like,
+.p-like,
+.message-form button,
+.p-chat > form button {
+  background: var(--peter-brand-gradient, linear-gradient(135deg, var(--coral), var(--violet))) !important;
+}
