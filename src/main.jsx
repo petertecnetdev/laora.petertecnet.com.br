@@ -4,12 +4,14 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import PeterAccountGateway from './components/PeterAccountGateway';
 import { installGlobalImageFallbacks } from './utils/imageFallback';
+import { installPasswordVisibilityToggles } from './utils/passwordVisibility';
 import './styles.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.petertecnet.com.br/api';
 const APP_SLUG = import.meta.env.VITE_APP_SLUG || 'laora';
 
 installGlobalImageFallbacks();
+installPasswordVisibilityToggles({ selector: '.p-auth-card input[type="password"]' });
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
