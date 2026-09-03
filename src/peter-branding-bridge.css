@@ -12,9 +12,10 @@
   background-repeat: no-repeat !important;
 }
 
-.p-mark[data-peter-branding-applied="true"] i,
-.laora-mark[data-peter-branding-applied="true"] i {
-  display: none !important;
+/* A marca antiga era desenhada por CSS. O arquivo publicado passa a ser a fonte visual. */
+.p-mark i,
+.laora-mark i {
+  opacity: 0 !important;
 }
 
 .p-primary,
