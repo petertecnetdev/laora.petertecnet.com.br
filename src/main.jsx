@@ -11,7 +11,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.petertecnet.co
 const APP_SLUG = import.meta.env.VITE_APP_SLUG || 'laora';
 
 installGlobalImageFallbacks();
-installPasswordVisibilityToggles({ selector: '.p-auth-card input[type="password"]' });
+installPasswordVisibilityToggles();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
