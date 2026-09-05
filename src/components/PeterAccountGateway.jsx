@@ -1,8 +1,8 @@
 /* eslint-disable react/prop-types */
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 
 const SDK_VERSION = "3.0.0";
-const TELEMETRY_VERSION = "3.1.0";
+const TELEMETRY_VERSION = "3.2.0";
 const SDK_URL = `https://petertecnet.com.br/ecosystem/peter-ecosystem-v3.js?v=${SDK_VERSION}`;
 const TELEMETRY_URL = `https://petertecnet.com.br/ecosystem/peter-telemetry-v3.js?v=${TELEMETRY_VERSION}`;
 let sdkPromise;
@@ -63,33 +63,53 @@ function loadSdk() {
 }
 
 function dockLauncherInNavbar(launcher) {
-  const selectors = ["[data-peter-ecosystem-slot]", ".navbar .container", ".navbar .container-fluid", ".navbar", "header nav", "nav[role='navigation']", "nav"];
+  const selectors = [
+    "[data-peter-ecosystem-slot]",
+    ".cut-navbar__inner",
+    ".navlog__navbar .container",
+    ".globalnav__header .navbar",
+    ".navbar .container",
+    ".navbar .container-fluid",
+    ".navbar",
+    "header nav",
+    "nav[role='navigation']",
+    "nav",
+  ];
+
   const findTarget = () => selectors.map((selector) => document.querySelector(selector)).find(Boolean) || null;
+
   const applyDockedLayout = () => {
     if (!launcher?.isConnected || !launcher.shadowRoot) return;
     const shell = launcher.shadowRoot.querySelector(".launcher");
     const button = launcher.shadowRoot.querySelector(".launcher-button");
     const panel = launcher.shadowRoot.querySelector(".panel");
+
     if (shell) Object.assign(shell.style, { position: "relative", right: "auto", top: "auto", bottom: "auto", zIndex: "2147483000", display: "inline-flex", alignItems: "center" });
     if (button) Object.assign(button.style, { width: "42px", height: "42px", flex: "0 0 auto", boxShadow: "none" });
     if (panel) Object.assign(panel.style, { position: "fixed", right: "12px", left: "auto", top: "calc(env(safe-area-inset-top) + 68px)", bottom: "auto", width: "min(370px, calc(100vw - 24px))", maxHeight: "calc(100vh - 92px)" });
   };
+
   const mount = () => {
     const target = findTarget();
     if (!target) return false;
     const toggle = target.querySelector?.(".navbar-toggler");
     if (toggle && toggle.parentElement === target) target.insertBefore(launcher, toggle);
     else if (launcher.parentElement !== target) target.appendChild(launcher);
-    Object.assign(launcher.style, { display: "inline-flex", alignItems: "center", marginLeft: "8px", flex: "0 0 auto" });
+    launcher.style.display = "inline-flex";
+    launcher.style.alignItems = "center";
+    launcher.style.marginLeft = "8px";
+    launcher.style.flex = "0 0 auto";
     launcher.setAttribute("data-peter-navbar-docked", "true");
     applyDockedLayout();
     return true;
   };
+
   mount();
   const shadowObserver = new MutationObserver(applyDockedLayout);
   if (launcher.shadowRoot) shadowObserver.observe(launcher.shadowRoot, { childList: true, subtree: true });
   const navObserver = new MutationObserver(() => { if (mount()) navObserver.disconnect(); });
   if (launcher.getAttribute("data-peter-navbar-docked") !== "true") navObserver.observe(document.body, { childList: true, subtree: true });
+
   return () => { shadowObserver.disconnect(); navObserver.disconnect(); };
 }
 
@@ -101,6 +121,7 @@ export default function PeterAccountGateway({ apiBaseUrl, appSlug, children }) {
     let cleanupDock = null;
     const host = hostRef.current;
     const api = apiBaseUrl || "https://api.petertecnet.com.br/api";
+
     loadTelemetry(api, appSlug || "")
       .catch((error) => console.error("[Peter Tecnet Telemetry]", error))
       .finally(() => loadSdk().then(() => {
@@ -112,6 +133,7 @@ export default function PeterAccountGateway({ apiBaseUrl, appSlug, children }) {
         host.replaceChildren(launcher);
         cleanupDock = dockLauncherInNavbar(launcher);
       }).catch((error) => console.error("[Peter Tecnet Ecosystem]", error)));
+
     return () => {
       active = false;
       cleanupDock?.();
@@ -119,5 +141,6 @@ export default function PeterAccountGateway({ apiBaseUrl, appSlug, children }) {
       host?.replaceChildren();
     };
   }, [apiBaseUrl, appSlug]);
+
   return <>{children}<span ref={hostRef} style={{ display: "contents" }} /></>;
 }
