@@ -5,6 +5,7 @@ import App from './App';
 import PeterAccountGateway from './components/PeterAccountGateway';
 import { installGlobalImageFallbacks } from './utils/imageFallback';
 import { installPasswordVisibilityToggles } from './utils/passwordVisibility';
+import { installPeterWhatsappFallback } from './utils/peterWhatsappFallback';
 import './styles.css';
 import './nexus-mobile-nav.css';
 
@@ -13,6 +14,7 @@ const APP_SLUG = import.meta.env.VITE_APP_SLUG || 'laora';
 
 installGlobalImageFallbacks();
 installPasswordVisibilityToggles();
+installPeterWhatsappFallback();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
