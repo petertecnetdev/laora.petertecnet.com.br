@@ -8,6 +8,7 @@ import { installPasswordVisibilityToggles } from './utils/passwordVisibility';
 import { installPeterWhatsappFallback } from './utils/peterWhatsappFallback';
 import './styles.css';
 import './nexus-mobile-nav.css';
+import './processing.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.petertecnet.com.br/api';
 const APP_SLUG = import.meta.env.VITE_APP_SLUG || 'laora';
