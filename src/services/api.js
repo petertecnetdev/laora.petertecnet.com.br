@@ -1,5 +1,8 @@
 import axios from 'axios';
 
+const VERIFICATION_RESEND_COOLDOWN_MS = 60000;
+let lastVerificationResendAt = 0;
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'https://api.petertecnet.com.br/api',
   timeout: 15000,
@@ -13,6 +16,18 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   config.headers['X-Frontend-Page'] = window.location.pathname;
+
+  const method = String(config?.method || '').toLowerCase();
+  const url = String(config?.url || '');
+  if (method === 'post' && url.includes('/auth/resend-code-email-verification')) {
+    const now = Date.now();
+    const remainingMs = VERIFICATION_RESEND_COOLDOWN_MS - (now - lastVerificationResendAt);
+    if (remainingMs > 0) {
+      return Promise.reject(new Error(`Aguarde ${Math.ceil(remainingMs / 1000)} segundos para reenviar o código.`));
+    }
+    lastVerificationResendAt = now;
+  }
+
   return config;
 });
 
