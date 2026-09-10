@@ -1,0 +1,41 @@
+name: Optimize realtime polling
+on:
+  push:
+    paths:
+      - .github/workflows/optimize-realtime-polling.yml
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply visibility-aware fallback polling
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/ProductionApp.jsx')
+          s = p.read_text()
+          old = "    const id = window.setInterval(() => { loadMatches(); if (chat?.id) loadMessages(chat.id, false, true); }, 8000);\n    return () => window.clearInterval(id);"
+          new = "    const refresh = () => { if (document.visibilityState !== 'visible') return; loadMatches(); if (chat?.id) loadMessages(chat.id, false, true); };\n    const id = window.setInterval(refresh, 30000);\n    const onVisibilityChange = () => { if (document.visibilityState === 'visible') refresh(); };\n    document.addEventListener('visibilitychange', onVisibilityChange);\n    return () => { window.clearInterval(id); document.removeEventListener('visibilitychange', onVisibilityChange); };"
+          if old not in s:
+              raise SystemExit('Expected polling block not found')
+          p.write_text(s.replace(old, new))
+          PY
+      - name: Validate build
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+          git diff --check
+      - name: Publish optimization
+        run: |
+          git config user.name 'Peter Tecnet Automation'
+          git config user.email 'petertecnet@gmail.com'
+          git add src/ProductionApp.jsx
+          git commit -m 'perf(realtime): reduce fallback polling load'
+          git push origin HEAD:main
