@@ -10,6 +10,7 @@ export function createLaoraRealtime(userId, onEvent) {
   if (!key || !userId) return () => {};
 
   const token = localStorage.getItem('token');
+  const appSlug = import.meta.env.VITE_APP_SLUG || 'laora';
   const host = import.meta.env.VITE_REVERB_HOST || window.location.hostname.replace(/^laora\./, 'api.');
   const scheme = import.meta.env.VITE_REVERB_SCHEME || 'https';
   const port = Number(import.meta.env.VITE_REVERB_PORT || (scheme === 'https' ? 443 : 80));
@@ -24,7 +25,13 @@ export function createLaoraRealtime(userId, onEvent) {
       forceTLS: scheme === 'https',
       enabledTransports: ['ws', 'wss'],
       authEndpoint: `${import.meta.env.VITE_API_ORIGIN || 'https://api.petertecnet.com.br'}/broadcasting/auth`,
-      auth: { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } },
+      auth: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+          'X-Peter-App': appSlug,
+        },
+      },
     });
 
     const channel = echo.private(`laora.user.${userId}`);
