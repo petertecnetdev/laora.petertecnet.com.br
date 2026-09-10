@@ -1,8 +1,25 @@
 import axios from 'axios';
 
 const VERIFICATION_RESEND_COOLDOWN_MS = 60000;
-let lastVerificationResendAt = 0;
+const VERIFICATION_RESEND_STORAGE_KEY = 'peter:verification-resend-at';
 let verificationResendInFlight = false;
+
+const getLastVerificationResendAt = () => {
+  try {
+    const value = Number(window.sessionStorage.getItem(VERIFICATION_RESEND_STORAGE_KEY));
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  } catch {
+    return 0;
+  }
+};
+
+const setLastVerificationResendAt = (value) => {
+  try {
+    window.sessionStorage.setItem(VERIFICATION_RESEND_STORAGE_KEY, String(value));
+  } catch {
+    // Storage can be unavailable in privacy-restricted browsers; in-flight protection still applies.
+  }
+};
 
 const isVerificationResend = (config) => {
   const method = String(config?.method || '').toLowerCase();
@@ -30,7 +47,7 @@ api.interceptors.request.use((config) => {
     }
 
     const now = Date.now();
-    const remainingMs = VERIFICATION_RESEND_COOLDOWN_MS - (now - lastVerificationResendAt);
+    const remainingMs = VERIFICATION_RESEND_COOLDOWN_MS - (now - getLastVerificationResendAt());
     if (remainingMs > 0) {
       return Promise.reject(new Error(`Aguarde ${Math.ceil(remainingMs / 1000)} segundos para reenviar o código.`));
     }
@@ -46,7 +63,7 @@ api.interceptors.response.use(
   (response) => {
     if (response?.config?.__peterVerificationResend) {
       verificationResendInFlight = false;
-      lastVerificationResendAt = Date.now();
+      setLastVerificationResendAt(Date.now());
     }
     return response;
   },
