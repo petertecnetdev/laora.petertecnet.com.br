@@ -86,7 +86,9 @@ api.interceptors.response.use(
     const config = error?.config;
     const status = error?.response?.status;
     const method = String(config?.method || '').toLowerCase();
-    const transientFailure = !error?.response || status === 408 || status === 429 || status >= 500;
+    // A 429 is an explicit back-pressure signal, not a transient transport failure. Retrying it
+    // automatically creates a synchronized request burst and makes shared API saturation worse.
+    const transientFailure = !error?.response || status === 408 || status >= 500;
 
     if (config?.__peterVerificationResend) {
       verificationResendInFlight = false;
@@ -96,10 +98,11 @@ api.interceptors.response.use(
       if (status === 429) setLastVerificationResendAt(Date.now());
     }
 
-    // Retry only idempotent reads. Never retry writes, auth mutations, swipes or messages.
+    // Retry only idempotent reads after transport/server failures. Respect HTTP 429 without an
+    // automatic retry so callers can surface back-pressure instead of amplifying it.
     if (config && method === 'get' && transientFailure && !config.__peterRetried) {
       config.__peterRetried = true;
-      await new Promise((resolve) => window.setTimeout(resolve, status === 429 ? 900 : 350));
+      await new Promise((resolve) => window.setTimeout(resolve, 350));
       return api.request(config);
     }
 
