@@ -276,8 +276,11 @@ export default function ProductionApp() {
 
   useEffect(() => {
     if (!authenticated || !verified) return undefined;
-    const id = window.setInterval(() => { loadMatches(); if (chat?.id) loadMessages(chat.id, false, true); }, 8000);
-    return () => window.clearInterval(id);
+    const refresh = () => { if (document.visibilityState !== 'visible') return; loadMatches(); if (chat?.id) loadMessages(chat.id, false, true); };
+    const id = window.setInterval(refresh, 30000);
+    const onVisibilityChange = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => { window.clearInterval(id); document.removeEventListener('visibilitychange', onVisibilityChange); };
   }, [authenticated, verified, chat?.id, loadMatches]);
 
   const swipe = async (target, action) => { try { const { data } = await api.post('/laora/swipes', { target_user_id: target, action }); setProfiles((v) => v.filter((p) => p.user_id !== target)); if (data.data?.matched) { notify('É match! A conexão apareceu para vocês dois.'); await loadMatches(); } } catch (e) { notify(errorMessage(e), 'error'); } };
