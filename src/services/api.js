@@ -90,6 +90,10 @@ api.interceptors.response.use(
 
     if (config?.__peterVerificationResend) {
       verificationResendInFlight = false;
+      // A server-side rate limit means the resend was received and rejected intentionally.
+      // Persist the client cooldown too, preventing repeated 429s across reloads/tabs and
+      // protecting the shared identity/email infrastructure from unnecessary traffic.
+      if (status === 429) setLastVerificationResendAt(Date.now());
     }
 
     // Retry only idempotent reads. Never retry writes, auth mutations, swipes or messages.
