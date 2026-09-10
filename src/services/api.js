@@ -1,12 +1,13 @@
 import axios from 'axios';
 
+const APP_SLUG = import.meta.env.VITE_APP_SLUG || 'laora';
 const VERIFICATION_RESEND_COOLDOWN_MS = 60000;
-const VERIFICATION_RESEND_STORAGE_KEY = 'peter:verification-resend-at';
+const VERIFICATION_RESEND_STORAGE_KEY = `peter:${APP_SLUG}:verification-resend-at`;
 let verificationResendInFlight = false;
 
 const getLastVerificationResendAt = () => {
   try {
-    const value = Number(window.sessionStorage.getItem(VERIFICATION_RESEND_STORAGE_KEY));
+    const value = Number(window.localStorage.getItem(VERIFICATION_RESEND_STORAGE_KEY));
     return Number.isFinite(value) && value > 0 ? value : 0;
   } catch {
     return 0;
@@ -15,7 +16,7 @@ const getLastVerificationResendAt = () => {
 
 const setLastVerificationResendAt = (value) => {
   try {
-    window.sessionStorage.setItem(VERIFICATION_RESEND_STORAGE_KEY, String(value));
+    window.localStorage.setItem(VERIFICATION_RESEND_STORAGE_KEY, String(value));
   } catch {
     // Storage can be unavailable in privacy-restricted browsers; in-flight protection still applies.
   }
@@ -32,7 +33,7 @@ const api = axios.create({
   timeout: 15000,
   headers: {
     Accept: 'application/json',
-    'X-Peter-App': import.meta.env.VITE_APP_SLUG || 'laora',
+    'X-Peter-App': APP_SLUG,
   },
 });
 
