@@ -1,0 +1,35 @@
+/* Acquisition: make the new-user path as visible as the returning-user path without changing auth behavior. */
+.p-auth-card:has(.google-wrap) > .p-link:last-of-type {
+  min-height: 48px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--coral), var(--violet));
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 10px 30px rgba(139, 92, 246, .18);
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+}
+
+.p-auth-card:has(.google-wrap) > .p-link:last-of-type:hover,
+.p-auth-card:has(.google-wrap) > .p-link:last-of-type:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 34px rgba(139, 92, 246, .28);
+  filter: brightness(1.06);
+}
+
+.p-auth-card:has(.google-wrap) > .p-link:last-of-type:focus-visible {
+  outline: 3px solid rgba(196, 181, 253, .38);
+  outline-offset: 2px;
+}
+
+.p-auth-card:has(.google-wrap) > .p-link:first-of-type {
+  color: var(--muted);
+  font-size: .88rem;
+}
+
+@media (max-width: 620px) {
+  .p-auth-card:has(.google-wrap) > .p-link:last-of-type {
+    width: 100%;
+    min-height: 52px;
+  }
+}
