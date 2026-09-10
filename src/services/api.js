@@ -3,6 +3,8 @@ import axios from 'axios';
 const APP_SLUG = import.meta.env.VITE_APP_SLUG || 'laora';
 const VERIFICATION_RESEND_COOLDOWN_MS = 60000;
 const VERIFICATION_RESEND_STORAGE_KEY = `peter:${APP_SLUG}:verification-resend-at`;
+const DEFAULT_TIMEOUT_MS = 15000;
+const UPLOAD_TIMEOUT_MS = 45000;
 let verificationResendInFlight = false;
 
 const getLastVerificationResendAt = () => {
@@ -28,9 +30,15 @@ const isVerificationResend = (config) => {
   return method === 'post' && url.includes('/auth/resend-code-email-verification');
 };
 
+const isMultipartUpload = (config) => {
+  if (typeof FormData === 'undefined' || !(config?.data instanceof FormData)) return false;
+  const method = String(config?.method || '').toLowerCase();
+  return ['post', 'put', 'patch'].includes(method);
+};
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'https://api.petertecnet.com.br/api',
-  timeout: 15000,
+  timeout: DEFAULT_TIMEOUT_MS,
   headers: {
     Accept: 'application/json',
     'X-Peter-App': APP_SLUG,
@@ -41,6 +49,12 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   config.headers['X-Frontend-Page'] = window.location.pathname;
+
+  // Mobile photo uploads can legitimately exceed the normal API timeout on slow networks.
+  // Keep ordinary requests fail-fast while giving multipart writes enough time to complete.
+  if (isMultipartUpload(config) && (!config.timeout || config.timeout === DEFAULT_TIMEOUT_MS)) {
+    config.timeout = UPLOAD_TIMEOUT_MS;
+  }
 
   if (isVerificationResend(config)) {
     if (verificationResendInFlight) {
