@@ -18,8 +18,20 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error?.response?.status === 401 && !String(error?.config?.url || '').includes('/auth/login')) {
+  async (error) => {
+    const config = error?.config;
+    const status = error?.response?.status;
+    const method = String(config?.method || '').toLowerCase();
+    const transientFailure = !error?.response || status === 408 || status === 429 || status >= 500;
+
+    // Retry only idempotent reads. Never retry writes, auth mutations, swipes or messages.
+    if (config && method === 'get' && transientFailure && !config.__peterRetried) {
+      config.__peterRetried = true;
+      await new Promise((resolve) => window.setTimeout(resolve, status === 429 ? 900 : 350));
+      return api.request(config);
+    }
+
+    if (status === 401 && !String(config?.url || '').includes('/auth/login')) {
       ['token', 'access_token', 'auth_token', 'user'].forEach((key) => localStorage.removeItem(key));
       window.dispatchEvent(new Event('authChanged'));
     }
