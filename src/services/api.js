@@ -68,11 +68,7 @@ const funnelEventsFor = (response) => {
     events.push(['engagement_discovery_viewed', 'engagement', true]);
     const discoveredProfiles = response?.data?.data;
     if (Array.isArray(discoveredProfiles)) {
-      events.push([
-        discoveredProfiles.length > 0 ? 'engagement_discovery_available' : 'engagement_discovery_empty',
-        'engagement',
-        true,
-      ]);
+      events.push([discoveredProfiles.length > 0 ? 'engagement_discovery_available' : 'engagement_discovery_empty', 'engagement', true]);
       if (discoveredProfiles.length > 0 && sessionFlag(DISCOVERY_RECOVERY_AWAITING_KEY)) {
         events.push(['engagement_discovery_recovered', 'engagement', false]);
         setSessionFlag(DISCOVERY_RECOVERY_AWAITING_KEY, false);
@@ -88,34 +84,41 @@ const funnelEventsFor = (response) => {
 };
 
 export const recordFunnelEvent = (type, funnel, dedupe = false) => {
-  if (!type) return;
-  if (dedupe) {
-    try {
-      const key = `${TELEMETRY_DEDUPE_PREFIX}${type}`;
-      if (window.sessionStorage.getItem(key)) return;
-      window.sessionStorage.setItem(key, '1');
-    } catch { /* Telemetry remains best-effort when storage is unavailable. */ }
+  try {
+    if (!type) return;
+    if (dedupe) {
+      try {
+        const key = `${TELEMETRY_DEDUPE_PREFIX}${type}`;
+        if (window.sessionStorage.getItem(key)) return;
+        window.sessionStorage.setItem(key, '1');
+      } catch { /* Telemetry remains best-effort when storage is unavailable. */ }
+    }
+
+    let token = null;
+    try { token = window.localStorage.getItem('token'); }
+    catch { /* Anonymous telemetry remains available when persistent storage is blocked. */ }
+
+    const event = {
+      id: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      type,
+      timestamp: new Date().toISOString(),
+      page: window.location.pathname,
+      label: `${funnel}_funnel`,
+      target: APP_SLUG,
+      metadata: { application: APP_SLUG, funnel, source: 'frontend' },
+    };
+
+    window.fetch(`${API_URL}/interactions/batch`, {
+      method: 'POST', keepalive: true,
+      headers: {
+        Accept: 'application/json', 'Content-Type': 'application/json', 'X-Peter-App': APP_SLUG,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ session_id: telemetrySessionId(), events: [event] }),
+    }).catch(() => {});
+  } catch {
+    // Analytics must never turn a successful product action into a frontend failure.
   }
-
-  const token = window.localStorage.getItem('token');
-  const event = {
-    id: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    type,
-    timestamp: new Date().toISOString(),
-    page: window.location.pathname,
-    label: `${funnel}_funnel`,
-    target: APP_SLUG,
-    metadata: { application: APP_SLUG, funnel, source: 'frontend' },
-  };
-
-  window.fetch(`${API_URL}/interactions/batch`, {
-    method: 'POST', keepalive: true,
-    headers: {
-      Accept: 'application/json', 'Content-Type': 'application/json', 'X-Peter-App': APP_SLUG,
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ session_id: telemetrySessionId(), events: [event] }),
-  }).catch(() => {});
 };
 
 const isVerificationResend = (config) => {
@@ -136,11 +139,12 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  let token = null;
+  try { token = window.localStorage.getItem('token'); }
+  catch { /* Requests can continue anonymously when persistent storage is blocked. */ }
   if (token) config.headers.Authorization = `Bearer ${token}`;
   config.headers['X-Frontend-Page'] = window.location.pathname;
 
-  // Preserve semantic request context before Axios serializes config.data for the adapter.
   if (String(config?.method || '').toLowerCase() === 'post' && String(config?.url || '').split('?')[0].endsWith('/laora/swipes')) {
     config.__peterSwipeAction = config?.data?.action;
   }
@@ -164,7 +168,8 @@ api.interceptors.response.use(
       verificationResendInFlight = false;
       setLastVerificationResendAt(Date.now());
     }
-    funnelEventsFor(response).forEach(([type, funnel, dedupe]) => recordFunnelEvent(type, funnel, dedupe));
+    try { funnelEventsFor(response).forEach(([type, funnel, dedupe]) => recordFunnelEvent(type, funnel, dedupe)); }
+    catch { /* Telemetry must never reject a successful API response. */ }
     return response;
   },
   async (error) => {
@@ -185,7 +190,8 @@ api.interceptors.response.use(
     }
 
     if (status === 401 && !String(config?.url || '').includes('/auth/login')) {
-      ['token', 'access_token', 'auth_token', 'user'].forEach((key) => localStorage.removeItem(key));
+      try { ['token', 'access_token', 'auth_token', 'user'].forEach((key) => window.localStorage.removeItem(key)); }
+      catch { /* Auth state still resets in memory through authChanged. */ }
       window.dispatchEvent(new Event('authChanged'));
     }
     return Promise.reject(error);
