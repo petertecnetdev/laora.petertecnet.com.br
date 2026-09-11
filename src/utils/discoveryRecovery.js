@@ -3,6 +3,7 @@ import { DISCOVERY_RECOVERY_OPENED_KEY, recordFunnelEvent } from '../services/ap
 const EMPTY_TITLE = 'Ninguém novo por enquanto';
 const HOST_ATTR = 'data-laora-discovery-recovery';
 const INVITE_CAMPAIGN = 'discovery_empty';
+const INVITE_SOURCE_KEY = 'peter:laora:organic-invite-source';
 
 function findEmptyDiscovery() {
   return Array.from(document.querySelectorAll('.p-empty')).find(
@@ -30,11 +31,25 @@ function openProfileFilters() {
   }, 80);
 }
 
+function anonymousInviteSource() {
+  try {
+    let source = window.localStorage.getItem(INVITE_SOURCE_KEY);
+    if (source && /^[a-z0-9-]{8,80}$/i.test(source)) return source;
+
+    source = globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+    window.localStorage.setItem(INVITE_SOURCE_KEY, source);
+    return source;
+  } catch {
+    return globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+  }
+}
+
 function inviteUrl() {
   const url = new URL(window.location.origin);
   url.searchParams.set('utm_source', 'laora');
   url.searchParams.set('utm_medium', 'member_invite');
   url.searchParams.set('utm_campaign', INVITE_CAMPAIGN);
+  url.searchParams.set('utm_content', `member_${anonymousInviteSource()}`);
   return url.toString();
 }
 
