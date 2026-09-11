@@ -7,6 +7,7 @@ import PwaInstallButton from './components/PwaInstallButton';
 import { installGlobalImageFallbacks } from './utils/imageFallback';
 import { installPasswordVisibilityToggles } from './utils/passwordVisibility';
 import { installPeterWhatsappFallback } from './utils/peterWhatsappFallback';
+import { installDiscoveryRecovery } from './utils/discoveryRecovery';
 import './styles.css';
 import './nexus-mobile-nav.css';
 import './processing.css';
@@ -19,6 +20,7 @@ const APP_SLUG = import.meta.env.VITE_APP_SLUG || 'laora';
 installGlobalImageFallbacks();
 installPasswordVisibilityToggles();
 installPeterWhatsappFallback();
+installDiscoveryRecovery();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
