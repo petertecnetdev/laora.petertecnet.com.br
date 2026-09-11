@@ -8,6 +8,7 @@ import { installGlobalImageFallbacks } from './utils/imageFallback';
 import { installPasswordVisibilityToggles } from './utils/passwordVisibility';
 import { installPeterWhatsappFallback } from './utils/peterWhatsappFallback';
 import { installDiscoveryRecovery } from './utils/discoveryRecovery';
+import { installAcquisitionAttribution } from './utils/acquisitionAttribution';
 import './styles.css';
 import './nexus-mobile-nav.css';
 import './processing.css';
@@ -21,6 +22,7 @@ installGlobalImageFallbacks();
 installPasswordVisibilityToggles();
 installPeterWhatsappFallback();
 installDiscoveryRecovery();
+installAcquisitionAttribution();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
