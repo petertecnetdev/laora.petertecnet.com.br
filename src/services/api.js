@@ -14,17 +14,12 @@ const getLastVerificationResendAt = () => {
   try {
     const value = Number(window.localStorage.getItem(VERIFICATION_RESEND_STORAGE_KEY));
     return Number.isFinite(value) && value > 0 ? value : 0;
-  } catch {
-    return 0;
-  }
+  } catch { return 0; }
 };
 
 const setLastVerificationResendAt = (value) => {
-  try {
-    window.localStorage.setItem(VERIFICATION_RESEND_STORAGE_KEY, String(value));
-  } catch {
-    // Storage can be unavailable in privacy-restricted browsers; in-flight protection still applies.
-  }
+  try { window.localStorage.setItem(VERIFICATION_RESEND_STORAGE_KEY, String(value)); }
+  catch { /* In-flight protection still applies when storage is unavailable. */ }
 };
 
 const telemetrySessionId = () => {
@@ -35,9 +30,7 @@ const telemetrySessionId = () => {
       window.sessionStorage.setItem(TELEMETRY_SESSION_KEY, value);
     }
     return value;
-  } catch {
-    return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  }
+  } catch { return `${Date.now()}-${Math.random().toString(36).slice(2)}`; }
 };
 
 const funnelEventsFor = (response) => {
@@ -50,32 +43,23 @@ const funnelEventsFor = (response) => {
   if (method === 'post' && url.endsWith('/auth/email-verify')) events.push(['activation_email_verified', 'activation', true]);
   if (method === 'put' && url.endsWith('/laora/profile')) events.push(['activation_profile_saved', 'activation', true]);
   if (method === 'post' && url.endsWith('/laora/profile/photos')) events.push(['activation_photo_uploaded', 'activation', true]);
-
-  // Engagement events extend the activation funnel into the actions that create retention.
-  // Discovery and first conversation are session-deduplicated so polling/reloads cannot inflate them.
   if (method === 'get' && url.endsWith('/laora/discover')) events.push(['engagement_discovery_viewed', 'engagement', true]);
-  if (method === 'post' && url.endsWith('/laora/swipes') && config?.data?.action === 'like') {
+  if (method === 'post' && url.endsWith('/laora/swipes') && config?.__peterSwipeAction === 'like') {
     events.push(['engagement_like_sent', 'engagement', false]);
     if (response?.data?.data?.matched) events.push(['engagement_match_created', 'engagement', false]);
   }
-  if (method === 'post' && /\/laora\/matches\/[^/]+\/messages$/.test(url)) {
-    events.push(['engagement_conversation_started', 'engagement', true]);
-  }
-
+  if (method === 'post' && /\/laora\/matches\/[^/]+\/messages$/.test(url)) events.push(['engagement_conversation_started', 'engagement', true]);
   return events;
 };
 
 const recordFunnelEvent = (type, funnel, dedupe = false) => {
   if (!type) return;
-
   if (dedupe) {
     try {
       const key = `${TELEMETRY_DEDUPE_PREFIX}${type}`;
       if (window.sessionStorage.getItem(key)) return;
       window.sessionStorage.setItem(key, '1');
-    } catch {
-      // Telemetry remains best-effort when storage is unavailable.
-    }
+    } catch { /* Telemetry remains best-effort when storage is unavailable. */ }
   }
 
   const token = window.localStorage.getItem('token');
@@ -89,14 +73,10 @@ const recordFunnelEvent = (type, funnel, dedupe = false) => {
     metadata: { application: APP_SLUG, funnel, source: 'frontend' },
   };
 
-  // Telemetry must never delay or break the conversion path it measures.
   window.fetch(`${API_URL}/interactions/batch`, {
-    method: 'POST',
-    keepalive: true,
+    method: 'POST', keepalive: true,
     headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      'X-Peter-App': APP_SLUG,
+      Accept: 'application/json', 'Content-Type': 'application/json', 'X-Peter-App': APP_SLUG,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify({ session_id: telemetrySessionId(), events: [event] }),
@@ -116,12 +96,8 @@ const isMultipartUpload = (config) => {
 };
 
 const api = axios.create({
-  baseURL: API_URL,
-  timeout: DEFAULT_TIMEOUT_MS,
-  headers: {
-    Accept: 'application/json',
-    'X-Peter-App': APP_SLUG,
-  },
+  baseURL: API_URL, timeout: DEFAULT_TIMEOUT_MS,
+  headers: { Accept: 'application/json', 'X-Peter-App': APP_SLUG },
 });
 
 api.interceptors.request.use((config) => {
@@ -129,25 +105,21 @@ api.interceptors.request.use((config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
   config.headers['X-Frontend-Page'] = window.location.pathname;
 
-  if (isMultipartUpload(config) && (!config.timeout || config.timeout === DEFAULT_TIMEOUT_MS)) {
-    config.timeout = UPLOAD_TIMEOUT_MS;
+  // Preserve semantic request context before Axios serializes config.data for the adapter.
+  if (String(config?.method || '').toLowerCase() === 'post' && String(config?.url || '').split('?')[0].endsWith('/laora/swipes')) {
+    config.__peterSwipeAction = config?.data?.action;
   }
 
-  if (isVerificationResend(config)) {
-    if (verificationResendInFlight) {
-      return Promise.reject(new Error('O reenvio do código já está em andamento.'));
-    }
+  if (isMultipartUpload(config) && (!config.timeout || config.timeout === DEFAULT_TIMEOUT_MS)) config.timeout = UPLOAD_TIMEOUT_MS;
 
+  if (isVerificationResend(config)) {
+    if (verificationResendInFlight) return Promise.reject(new Error('O reenvio do código já está em andamento.'));
     const now = Date.now();
     const remainingMs = VERIFICATION_RESEND_COOLDOWN_MS - (now - getLastVerificationResendAt());
-    if (remainingMs > 0) {
-      return Promise.reject(new Error(`Aguarde ${Math.ceil(remainingMs / 1000)} segundos para reenviar o código.`));
-    }
-
+    if (remainingMs > 0) return Promise.reject(new Error(`Aguarde ${Math.ceil(remainingMs / 1000)} segundos para reenviar o código.`));
     verificationResendInFlight = true;
     config.__peterVerificationResend = true;
   }
-
   return config;
 });
 
