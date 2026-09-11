@@ -6,6 +6,8 @@ const VERIFICATION_RESEND_COOLDOWN_MS = 60000;
 const VERIFICATION_RESEND_STORAGE_KEY = `peter:${APP_SLUG}:verification-resend-at`;
 const TELEMETRY_SESSION_KEY = `peter:${APP_SLUG}:telemetry-session`;
 const TELEMETRY_DEDUPE_PREFIX = `peter:${APP_SLUG}:telemetry:`;
+export const DISCOVERY_RECOVERY_OPENED_KEY = `peter:${APP_SLUG}:discovery-recovery-opened`;
+const DISCOVERY_RECOVERY_AWAITING_KEY = `peter:${APP_SLUG}:discovery-recovery-awaiting`;
 const DEFAULT_TIMEOUT_MS = 15000;
 const UPLOAD_TIMEOUT_MS = 45000;
 let verificationResendInFlight = false;
@@ -33,6 +35,18 @@ const telemetrySessionId = () => {
   } catch { return `${Date.now()}-${Math.random().toString(36).slice(2)}`; }
 };
 
+const sessionFlag = (key) => {
+  try { return window.sessionStorage.getItem(key) === '1'; }
+  catch { return false; }
+};
+
+const setSessionFlag = (key, value) => {
+  try {
+    if (value) window.sessionStorage.setItem(key, '1');
+    else window.sessionStorage.removeItem(key);
+  } catch { /* Recovery analytics remains best-effort. */ }
+};
+
 const funnelEventsFor = (response) => {
   const config = response?.config;
   const method = String(config?.method || '').toLowerCase();
@@ -41,7 +55,14 @@ const funnelEventsFor = (response) => {
 
   if (method === 'post' && url.endsWith('/auth/register')) events.push(['activation_registered', 'activation', true]);
   if (method === 'post' && url.endsWith('/auth/email-verify')) events.push(['activation_email_verified', 'activation', true]);
-  if (method === 'put' && url.endsWith('/laora/profile')) events.push(['activation_profile_saved', 'activation', true]);
+  if (method === 'put' && url.endsWith('/laora/profile')) {
+    events.push(['activation_profile_saved', 'activation', true]);
+    if (sessionFlag(DISCOVERY_RECOVERY_OPENED_KEY)) {
+      events.push(['engagement_discovery_filters_adjusted', 'engagement', false]);
+      setSessionFlag(DISCOVERY_RECOVERY_OPENED_KEY, false);
+      setSessionFlag(DISCOVERY_RECOVERY_AWAITING_KEY, true);
+    }
+  }
   if (method === 'post' && url.endsWith('/laora/profile/photos')) events.push(['activation_photo_uploaded', 'activation', true]);
   if (method === 'get' && url.endsWith('/laora/discover')) {
     events.push(['engagement_discovery_viewed', 'engagement', true]);
@@ -52,6 +73,10 @@ const funnelEventsFor = (response) => {
         'engagement',
         true,
       ]);
+      if (discoveredProfiles.length > 0 && sessionFlag(DISCOVERY_RECOVERY_AWAITING_KEY)) {
+        events.push(['engagement_discovery_recovered', 'engagement', false]);
+        setSessionFlag(DISCOVERY_RECOVERY_AWAITING_KEY, false);
+      }
     }
   }
   if (method === 'post' && url.endsWith('/laora/swipes') && config?.__peterSwipeAction === 'like') {
@@ -62,7 +87,7 @@ const funnelEventsFor = (response) => {
   return events;
 };
 
-const recordFunnelEvent = (type, funnel, dedupe = false) => {
+export const recordFunnelEvent = (type, funnel, dedupe = false) => {
   if (!type) return;
   if (dedupe) {
     try {
