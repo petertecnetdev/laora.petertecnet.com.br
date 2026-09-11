@@ -5,6 +5,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://api.petertecnet.com.br/
 const VERIFICATION_RESEND_COOLDOWN_MS = 60000;
 const VERIFICATION_RESEND_STORAGE_KEY = `peter:${APP_SLUG}:verification-resend-at`;
 const TELEMETRY_SESSION_KEY = `peter:${APP_SLUG}:telemetry-session`;
+const TELEMETRY_DEDUPE_PREFIX = `peter:${APP_SLUG}:telemetry:`;
 const DEFAULT_TIMEOUT_MS = 15000;
 const UPLOAD_TIMEOUT_MS = 45000;
 let verificationResendInFlight = false;
@@ -39,27 +40,53 @@ const telemetrySessionId = () => {
   }
 };
 
-const funnelEventFor = (config) => {
+const funnelEventsFor = (response) => {
+  const config = response?.config;
   const method = String(config?.method || '').toLowerCase();
   const url = String(config?.url || '').split('?')[0];
-  if (method === 'post' && url.endsWith('/auth/register')) return 'activation_registered';
-  if (method === 'post' && url.endsWith('/auth/email-verify')) return 'activation_email_verified';
-  if (method === 'put' && url.endsWith('/laora/profile')) return 'activation_profile_saved';
-  if (method === 'post' && url.endsWith('/laora/profile/photos')) return 'activation_photo_uploaded';
-  return null;
+  const events = [];
+
+  if (method === 'post' && url.endsWith('/auth/register')) events.push(['activation_registered', 'activation', true]);
+  if (method === 'post' && url.endsWith('/auth/email-verify')) events.push(['activation_email_verified', 'activation', true]);
+  if (method === 'put' && url.endsWith('/laora/profile')) events.push(['activation_profile_saved', 'activation', true]);
+  if (method === 'post' && url.endsWith('/laora/profile/photos')) events.push(['activation_photo_uploaded', 'activation', true]);
+
+  // Engagement events extend the activation funnel into the actions that create retention.
+  // Discovery and first conversation are session-deduplicated so polling/reloads cannot inflate them.
+  if (method === 'get' && url.endsWith('/laora/discover')) events.push(['engagement_discovery_viewed', 'engagement', true]);
+  if (method === 'post' && url.endsWith('/laora/swipes') && config?.data?.action === 'like') {
+    events.push(['engagement_like_sent', 'engagement', false]);
+    if (response?.data?.data?.matched) events.push(['engagement_match_created', 'engagement', false]);
+  }
+  if (method === 'post' && /\/laora\/matches\/[^/]+\/messages$/.test(url)) {
+    events.push(['engagement_conversation_started', 'engagement', true]);
+  }
+
+  return events;
 };
 
-const recordFunnelEvent = (type) => {
+const recordFunnelEvent = (type, funnel, dedupe = false) => {
   if (!type) return;
+
+  if (dedupe) {
+    try {
+      const key = `${TELEMETRY_DEDUPE_PREFIX}${type}`;
+      if (window.sessionStorage.getItem(key)) return;
+      window.sessionStorage.setItem(key, '1');
+    } catch {
+      // Telemetry remains best-effort when storage is unavailable.
+    }
+  }
+
   const token = window.localStorage.getItem('token');
   const event = {
     id: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     type,
     timestamp: new Date().toISOString(),
     page: window.location.pathname,
-    label: 'activation_funnel',
+    label: `${funnel}_funnel`,
     target: APP_SLUG,
-    metadata: { application: APP_SLUG, funnel: 'activation', source: 'frontend' },
+    metadata: { application: APP_SLUG, funnel, source: 'frontend' },
   };
 
   // Telemetry must never delay or break the conversion path it measures.
@@ -102,8 +129,6 @@ api.interceptors.request.use((config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
   config.headers['X-Frontend-Page'] = window.location.pathname;
 
-  // Mobile photo uploads can legitimately exceed the normal API timeout on slow networks.
-  // Keep ordinary requests fail-fast while giving multipart writes enough time to complete.
   if (isMultipartUpload(config) && (!config.timeout || config.timeout === DEFAULT_TIMEOUT_MS)) {
     config.timeout = UPLOAD_TIMEOUT_MS;
   }
@@ -132,27 +157,20 @@ api.interceptors.response.use(
       verificationResendInFlight = false;
       setLastVerificationResendAt(Date.now());
     }
-    recordFunnelEvent(funnelEventFor(response?.config));
+    funnelEventsFor(response).forEach(([type, funnel, dedupe]) => recordFunnelEvent(type, funnel, dedupe));
     return response;
   },
   async (error) => {
     const config = error?.config;
     const status = error?.response?.status;
     const method = String(config?.method || '').toLowerCase();
-    // A 429 is an explicit back-pressure signal, not a transient transport failure. Retrying it
-    // automatically creates a synchronized request burst and makes shared API saturation worse.
     const transientFailure = !error?.response || status === 408 || status >= 500;
 
     if (config?.__peterVerificationResend) {
       verificationResendInFlight = false;
-      // A server-side rate limit means the resend was received and rejected intentionally.
-      // Persist the client cooldown too, preventing repeated 429s across reloads/tabs and
-      // protecting the shared identity/email infrastructure from unnecessary traffic.
       if (status === 429) setLastVerificationResendAt(Date.now());
     }
 
-    // Retry only idempotent reads after transport/server failures. Respect HTTP 429 without an
-    // automatic retry so callers can surface back-pressure instead of amplifying it.
     if (config && method === 'get' && transientFailure && !config.__peterRetried) {
       config.__peterRetried = true;
       await new Promise((resolve) => window.setTimeout(resolve, 350));
