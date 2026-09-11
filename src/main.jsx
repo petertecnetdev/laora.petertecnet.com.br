@@ -9,6 +9,7 @@ import { installPasswordVisibilityToggles } from './utils/passwordVisibility';
 import { installPeterWhatsappFallback } from './utils/peterWhatsappFallback';
 import { installDiscoveryRecovery } from './utils/discoveryRecovery';
 import { installAcquisitionAttribution } from './utils/acquisitionAttribution';
+import { installProfileActivationGuide } from './utils/profileActivation';
 import './styles.css';
 import './nexus-mobile-nav.css';
 import './processing.css';
@@ -23,6 +24,7 @@ installPasswordVisibilityToggles();
 installPeterWhatsappFallback();
 installDiscoveryRecovery();
 installAcquisitionAttribution();
+installProfileActivationGuide();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
