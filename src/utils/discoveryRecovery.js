@@ -2,6 +2,7 @@ import { DISCOVERY_RECOVERY_OPENED_KEY, recordFunnelEvent } from '../services/ap
 
 const EMPTY_TITLE = 'Ninguém novo por enquanto';
 const HOST_ATTR = 'data-laora-discovery-recovery';
+const INVITE_CAMPAIGN = 'discovery_empty';
 
 function findEmptyDiscovery() {
   return Array.from(document.querySelectorAll('.p-empty')).find(
@@ -29,8 +30,27 @@ function openProfileFilters() {
   }, 80);
 }
 
+function inviteUrl() {
+  const url = new URL(window.location.origin);
+  url.searchParams.set('utm_source', 'laora');
+  url.searchParams.set('utm_medium', 'member_invite');
+  url.searchParams.set('utm_campaign', INVITE_CAMPAIGN);
+  return url.toString();
+}
+
+async function copyInvite(text, url) {
+  try {
+    if (!navigator.clipboard?.writeText) return false;
+    await navigator.clipboard.writeText(`${text} ${url}`);
+    recordFunnelEvent('acquisition_discovery_invite_copied', 'acquisition');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function invitePeople() {
-  const url = window.location.origin;
+  const url = inviteUrl();
   const text = 'Conheça a Laora, uma plataforma para conexões reais com matches transparentes e mais segurança.';
   const shareData = { title: 'Laora', text, url };
 
@@ -43,14 +63,14 @@ async function invitePeople() {
 
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`;
     const popup = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-    if (popup) recordFunnelEvent('acquisition_discovery_invite_shared', 'acquisition');
-  } catch (error) {
-    if (error?.name !== 'AbortError') {
-      try {
-        await navigator.clipboard?.writeText(`${text} ${url}`);
-        recordFunnelEvent('acquisition_discovery_invite_copied', 'acquisition');
-      } catch { /* Sharing remains optional and must never block discovery. */ }
+    if (popup) {
+      recordFunnelEvent('acquisition_discovery_invite_shared', 'acquisition');
+      return;
     }
+
+    await copyInvite(text, url);
+  } catch (error) {
+    if (error?.name !== 'AbortError') await copyInvite(text, url);
   }
 }
 
