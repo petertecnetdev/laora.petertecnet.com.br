@@ -29,6 +29,31 @@ function openProfileFilters() {
   }, 80);
 }
 
+async function invitePeople() {
+  const url = window.location.origin;
+  const text = 'Conheça a Laora, uma plataforma para conexões reais com matches transparentes e mais segurança.';
+  const shareData = { title: 'Laora', text, url };
+
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData);
+      recordFunnelEvent('acquisition_discovery_invite_shared', 'acquisition');
+      return;
+    }
+
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`;
+    const popup = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    if (popup) recordFunnelEvent('acquisition_discovery_invite_shared', 'acquisition');
+  } catch (error) {
+    if (error?.name !== 'AbortError') {
+      try {
+        await navigator.clipboard?.writeText(`${text} ${url}`);
+        recordFunnelEvent('acquisition_discovery_invite_copied', 'acquisition');
+      } catch { /* Sharing remains optional and must never block discovery. */ }
+    }
+  }
+}
+
 function enhance() {
   const empty = findEmptyDiscovery();
   if (!empty || empty.querySelector(`[${HOST_ATTR}]`)) return;
@@ -46,7 +71,14 @@ function enhance() {
   button.textContent = 'Ajustar filtros';
   button.addEventListener('click', openProfileFilters);
 
-  host.append(hint, button);
+  const invite = document.createElement('button');
+  invite.type = 'button';
+  invite.className = 'p-button';
+  invite.textContent = 'Convidar pessoas';
+  invite.setAttribute('aria-label', 'Compartilhar a Laora e convidar novas pessoas');
+  invite.addEventListener('click', invitePeople);
+
+  host.append(hint, button, invite);
   empty.appendChild(host);
 }
 
