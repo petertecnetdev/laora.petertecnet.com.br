@@ -130,9 +130,15 @@ api.interceptors.response.use(
     return response;
   },
   async (error) => {
-    const config = error?.config; const status = error?.response?.status; const method = String(config?.method || '').toLowerCase(); const transientFailure = !error?.response || status === 408 || status >= 500;
+    const config = error?.config; const status = error?.response?.status; const method = String(config?.method || '').toLowerCase(); const transientFailure = !error?.response || status === 408 || status === 429 || status >= 500;
     if (config?.__peterVerificationResend) { verificationResendInFlight = false; if (status === 429) setLastVerificationResendAt(Date.now()); }
-    if (config && method === 'get' && transientFailure && !config.__peterRetried) { config.__peterRetried = true; await new Promise((resolve) => window.setTimeout(resolve, 350)); return api.request(config); }
+    if (config && method === 'get' && transientFailure && !config.__peterRetried) {
+      config.__peterRetried = true;
+      const retryAfterSeconds = Number(error?.response?.headers?.['retry-after']);
+      const retryDelayMs = status === 429 && Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0 ? Math.min(retryAfterSeconds * 1000, 5000) : 350;
+      await new Promise((resolve) => window.setTimeout(resolve, retryDelayMs));
+      return api.request(config);
+    }
     if (status === 401 && !String(config?.url || '').includes('/auth/login')) { try { ['token', 'access_token', 'auth_token', 'user'].forEach((key) => window.localStorage.removeItem(key)); } catch { /* noop */ } window.dispatchEvent(new Event('authChanged')); }
     return Promise.reject(error);
   },
