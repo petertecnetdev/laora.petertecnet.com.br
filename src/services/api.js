@@ -6,6 +6,8 @@ const VERIFICATION_RESEND_COOLDOWN_MS = 60000;
 const VERIFICATION_RESEND_STORAGE_KEY = `peter:${APP_SLUG}:verification-resend-at`;
 const TELEMETRY_SESSION_KEY = `peter:${APP_SLUG}:telemetry-session`;
 const TELEMETRY_DEDUPE_PREFIX = `peter:${APP_SLUG}:telemetry:`;
+const ACQUISITION_ATTRIBUTION_KEY = `peter:${APP_SLUG}:acquisition-attribution`;
+const ACQUISITION_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
 export const DISCOVERY_RECOVERY_OPENED_KEY = `peter:${APP_SLUG}:discovery-recovery-opened`;
 const DISCOVERY_RECOVERY_AWAITING_KEY = `peter:${APP_SLUG}:discovery-recovery-awaiting`;
 const DEFAULT_TIMEOUT_MS = 15000;
@@ -33,6 +35,22 @@ const telemetrySessionId = () => {
     }
     return value;
   } catch { return `${Date.now()}-${Math.random().toString(36).slice(2)}`; }
+};
+
+const acquisitionMetadata = () => {
+  try {
+    const raw = window.localStorage.getItem(ACQUISITION_ATTRIBUTION_KEY);
+    if (!raw) return {};
+    const stored = JSON.parse(raw);
+    if (!stored || typeof stored !== 'object') return {};
+    const attribution = {};
+    ACQUISITION_KEYS.forEach((key) => {
+      if (typeof stored[key] === 'string' && stored[key]) attribution[key] = stored[key].slice(0, 160);
+    });
+    if (typeof stored.landing_path === 'string' && stored.landing_path) attribution.acquisition_landing_path = stored.landing_path.slice(0, 240);
+    if (typeof stored.captured_at === 'string' && stored.captured_at) attribution.acquisition_captured_at = stored.captured_at;
+    return Object.keys(attribution).length ? { acquisition: attribution } : {};
+  } catch { return {}; }
 };
 
 const sessionFlag = (key) => {
@@ -105,7 +123,7 @@ export const recordFunnelEvent = (type, funnel, dedupe = false) => {
       page: window.location.pathname,
       label: `${funnel}_funnel`,
       target: APP_SLUG,
-      metadata: { application: APP_SLUG, funnel, source: 'frontend' },
+      metadata: { application: APP_SLUG, funnel, source: 'frontend', ...acquisitionMetadata() },
     };
 
     window.fetch(`${API_URL}/interactions/batch`, {
