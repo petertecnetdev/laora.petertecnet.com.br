@@ -1,5 +1,6 @@
-const CACHE_NAME = 'laora-shell-v2';
-const APP_SHELL = ['/', '/manifest.json', '/pwa-icon.svg'];
+const CACHE_NAME = 'laora-shell-v3';
+const APP_SHELL = ['/', '/pwa-icon.svg'];
+const NETWORK_FIRST_PATHS = new Set(['/manifest.json', '/sw.js']);
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -34,6 +35,21 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => caches.match('/')),
+    );
+    return;
+  }
+
+  if (NETWORK_FIRST_PATHS.has(url.pathname)) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response?.ok && response.type === 'basic' && url.pathname !== '/sw.js') {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request)),
     );
     return;
   }
