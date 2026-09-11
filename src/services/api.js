@@ -1,8 +1,10 @@
 import axios from 'axios';
 
 const APP_SLUG = import.meta.env.VITE_APP_SLUG || 'laora';
+const API_URL = import.meta.env.VITE_API_URL || 'https://api.petertecnet.com.br/api';
 const VERIFICATION_RESEND_COOLDOWN_MS = 60000;
 const VERIFICATION_RESEND_STORAGE_KEY = `peter:${APP_SLUG}:verification-resend-at`;
+const TELEMETRY_SESSION_KEY = `peter:${APP_SLUG}:telemetry-session`;
 const DEFAULT_TIMEOUT_MS = 15000;
 const UPLOAD_TIMEOUT_MS = 45000;
 let verificationResendInFlight = false;
@@ -24,6 +26,56 @@ const setLastVerificationResendAt = (value) => {
   }
 };
 
+const telemetrySessionId = () => {
+  try {
+    let value = window.sessionStorage.getItem(TELEMETRY_SESSION_KEY);
+    if (!value) {
+      value = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      window.sessionStorage.setItem(TELEMETRY_SESSION_KEY, value);
+    }
+    return value;
+  } catch {
+    return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
+};
+
+const funnelEventFor = (config) => {
+  const method = String(config?.method || '').toLowerCase();
+  const url = String(config?.url || '').split('?')[0];
+  if (method === 'post' && url.endsWith('/auth/register')) return 'activation_registered';
+  if (method === 'post' && url.endsWith('/auth/email-verify')) return 'activation_email_verified';
+  if (method === 'put' && url.endsWith('/laora/profile')) return 'activation_profile_saved';
+  if (method === 'post' && url.endsWith('/laora/profile/photos')) return 'activation_photo_uploaded';
+  return null;
+};
+
+const recordFunnelEvent = (type) => {
+  if (!type) return;
+  const token = window.localStorage.getItem('token');
+  const event = {
+    id: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    type,
+    timestamp: new Date().toISOString(),
+    page: window.location.pathname,
+    label: 'activation_funnel',
+    target: APP_SLUG,
+    metadata: { application: APP_SLUG, funnel: 'activation', source: 'frontend' },
+  };
+
+  // Telemetry must never delay or break the conversion path it measures.
+  window.fetch(`${API_URL}/interactions/batch`, {
+    method: 'POST',
+    keepalive: true,
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      'X-Peter-App': APP_SLUG,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ session_id: telemetrySessionId(), events: [event] }),
+  }).catch(() => {});
+};
+
 const isVerificationResend = (config) => {
   const method = String(config?.method || '').toLowerCase();
   const url = String(config?.url || '');
@@ -37,7 +89,7 @@ const isMultipartUpload = (config) => {
 };
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://api.petertecnet.com.br/api',
+  baseURL: API_URL,
   timeout: DEFAULT_TIMEOUT_MS,
   headers: {
     Accept: 'application/json',
@@ -80,6 +132,7 @@ api.interceptors.response.use(
       verificationResendInFlight = false;
       setLastVerificationResendAt(Date.now());
     }
+    recordFunnelEvent(funnelEventFor(response?.config));
     return response;
   },
   async (error) => {
