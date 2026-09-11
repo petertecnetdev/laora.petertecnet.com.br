@@ -43,7 +43,17 @@ const funnelEventsFor = (response) => {
   if (method === 'post' && url.endsWith('/auth/email-verify')) events.push(['activation_email_verified', 'activation', true]);
   if (method === 'put' && url.endsWith('/laora/profile')) events.push(['activation_profile_saved', 'activation', true]);
   if (method === 'post' && url.endsWith('/laora/profile/photos')) events.push(['activation_photo_uploaded', 'activation', true]);
-  if (method === 'get' && url.endsWith('/laora/discover')) events.push(['engagement_discovery_viewed', 'engagement', true]);
+  if (method === 'get' && url.endsWith('/laora/discover')) {
+    events.push(['engagement_discovery_viewed', 'engagement', true]);
+    const discoveredProfiles = response?.data?.data;
+    if (Array.isArray(discoveredProfiles)) {
+      events.push([
+        discoveredProfiles.length > 0 ? 'engagement_discovery_available' : 'engagement_discovery_empty',
+        'engagement',
+        true,
+      ]);
+    }
+  }
   if (method === 'post' && url.endsWith('/laora/swipes') && config?.__peterSwipeAction === 'like') {
     events.push(['engagement_like_sent', 'engagement', false]);
     if (response?.data?.data?.matched) events.push(['engagement_match_created', 'engagement', false]);
