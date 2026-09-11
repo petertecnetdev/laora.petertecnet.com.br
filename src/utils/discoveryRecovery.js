@@ -1,3 +1,5 @@
+import { DISCOVERY_RECOVERY_OPENED_KEY, recordFunnelEvent } from '../services/api';
+
 const EMPTY_TITLE = 'Ninguém novo por enquanto';
 const HOST_ATTR = 'data-laora-discovery-recovery';
 
@@ -12,6 +14,11 @@ function openProfileFilters() {
     (button) => button.textContent?.includes('Perfil'),
   );
   if (!profileButton) return;
+
+  try { window.sessionStorage.setItem(DISCOVERY_RECOVERY_OPENED_KEY, '1'); }
+  catch { /* Recovery continues even when storage is unavailable. */ }
+  recordFunnelEvent('engagement_discovery_filters_opened', 'engagement');
+
   profileButton.click();
   window.setTimeout(() => {
     const distance = Array.from(document.querySelectorAll('.p-form label')).find(
