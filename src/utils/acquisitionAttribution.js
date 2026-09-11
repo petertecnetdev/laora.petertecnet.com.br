@@ -15,6 +15,22 @@ function removeStoredAttribution() {
   catch { /* Attribution cleanup must never block the product. */ }
 }
 
+function externalReferrerAttribution() {
+  try {
+    if (!document.referrer) return null;
+    const referrer = new URL(document.referrer);
+    if (!referrer.hostname || referrer.hostname === window.location.hostname) return null;
+
+    return {
+      utm_source: safeValue(referrer.hostname.replace(/^www\./, '')),
+      utm_medium: 'referral',
+      utm_campaign: 'organic_referral',
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function readAcquisitionAttribution() {
   try {
     const raw = window.localStorage.getItem(ATTRIBUTION_KEY);
@@ -51,6 +67,13 @@ export function installAcquisitionAttribution() {
       const value = safeValue(params.get(key));
       if (value) attribution[key] = value;
     });
+
+    // Organic links often arrive without UTMs (social bios, messaging apps,
+    // partner sites and editorial links). Preserve that acquisition signal
+    // without overriding explicit campaign attribution.
+    if (!Object.keys(attribution).length) {
+      Object.assign(attribution, externalReferrerAttribution() || {});
+    }
 
     if (!Object.keys(attribution).length) return;
 
