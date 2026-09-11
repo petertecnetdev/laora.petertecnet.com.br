@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Laora" />
-  <meta name="description" content="Laora é um app de relacionamento para maiores de 18 anos: conheça pessoas, encontre matches recíprocos e converse depois do match, com privacidade, denúncia e bloqueio." />
+  <meta name="description" content="Laora é um app de relacionamento grátis para maiores de 18 anos: conheça pessoas, encontre matches recíprocos e converse depois do match, com privacidade, denúncia e bloqueio." />
   <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
   <link rel="canonical" href="https://laora.petertecnet.com.br/" />
   <link rel="preconnect" href="https://api.petertecnet.com.br" crossorigin />
@@ -20,19 +20,19 @@
   <meta property="og:locale" content="pt_BR" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Laora" />
-  <meta property="og:title" content="Laora | App de relacionamento e conexões reais" />
+  <meta property="og:title" content="Laora | App de relacionamento grátis e conexões reais" />
   <meta property="og:description" content="Conheça pessoas, encontre matches recíprocos e converse com mais privacidade e transparência. Exclusivo para maiores de 18 anos." />
   <meta property="og:url" content="https://laora.petertecnet.com.br/" />
   <meta property="og:image" content="https://laora.petertecnet.com.br/pwa-icon.svg" />
   <meta property="og:image:alt" content="Laora — app de relacionamento e conexões reais" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Laora | App de relacionamento e conexões reais" />
+  <meta name="twitter:title" content="Laora | App de relacionamento grátis e conexões reais" />
   <meta name="twitter:description" content="Conheça pessoas, encontre matches recíprocos e converse depois do match. Exclusivo para maiores de 18 anos." />
   <meta name="twitter:image" content="https://laora.petertecnet.com.br/pwa-icon.svg" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" type="image/svg+xml" href="/pwa-icon.svg" />
   <link rel="apple-touch-icon" href="/pwa-icon.svg" />
-  <title>Laora | App de relacionamento e conexões reais</title>
+  <title>Laora | App de relacionamento grátis e conexões reais</title>
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -42,13 +42,43 @@
       "applicationCategory": "SocialNetworkingApplication",
       "operatingSystem": "Web, Android, iOS",
       "isAccessibleForFree": true,
-      "description": "App de relacionamento para maiores de 18 anos com descoberta de pessoas, matches recíprocos, chat após o match e controles de privacidade e segurança.",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "BRL" },
+      "description": "App de relacionamento grátis para maiores de 18 anos com descoberta de pessoas, matches recíprocos, chat após o match e controles de privacidade e segurança.",
       "inLanguage": "pt-BR",
+      "audience": { "@type": "PeopleAudience", "requiredMinAge": 18 },
       "publisher": {
         "@type": "Organization",
         "name": "Peter Tecnet",
         "url": "https://petertecnet.com.br/"
       }
+    }
+  </script>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "O Laora é grátis?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Sim. Você pode criar sua conta, montar seu perfil, descobrir pessoas, encontrar matches recíprocos e conversar pelo Laora." }
+        },
+        {
+          "@type": "Question",
+          "name": "Como funciona o match no Laora?",
+          "acceptedAnswer": { "@type": "Answer", "text": "O match acontece quando duas pessoas demonstram interesse uma na outra. Depois do interesse recíproco, a conversa é liberada para os dois." }
+        },
+        {
+          "@type": "Question",
+          "name": "Minha localização exata aparece para outras pessoas?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Não. A localização exata não é exibida publicamente e é usada somente para ajudar a calcular a distância entre perfis." }
+        },
+        {
+          "@type": "Question",
+          "name": "Quem pode usar o Laora?",
+          "acceptedAnswer": { "@type": "Answer", "text": "O Laora é destinado exclusivamente a pessoas com 18 anos ou mais." }
+        }
+      ]
     }
   </script>
   <script
@@ -66,11 +96,21 @@
   <div id="root">
     <main>
       <section>
-        <h1>Laora: app de relacionamento para conexões reais</h1>
+        <h1>Laora: app de relacionamento grátis para conexões reais</h1>
         <p>Conheça pessoas, descubra perfis compatíveis e encontre matches recíprocos. No Laora, a conversa é liberada depois do match, com recursos de privacidade, denúncia e bloqueio.</p>
-        <h2>Relacionamento com mais transparência e segurança</h2>
-        <p>Crie seu perfil, adicione fotos, interesses e preferências, descubra pessoas e converse quando o interesse for recíproco. Sua localização exata não é exibida publicamente.</p>
-        <p>O Laora é uma plataforma da Peter Tecnet destinada exclusivamente a maiores de 18 anos.</p>
+        <h2>Conheça pessoas e converse depois do match</h2>
+        <p>Crie seu perfil gratuitamente, adicione fotos, interesses e preferências, descubra pessoas e converse quando o interesse for recíproco. Sua localização exata não é exibida publicamente.</p>
+        <h2>Como funciona o Laora?</h2>
+        <p>Você cria uma conta, completa o perfil e escolhe suas preferências de descoberta. Ao curtir alguém que também demonstrou interesse em você, os dois recebem o match e podem iniciar uma conversa.</p>
+        <h2>Privacidade e segurança para conhecer novas pessoas</h2>
+        <p>O Laora oferece bloqueio e denúncia para ajudar cada pessoa a controlar com quem deseja interagir. O serviço é destinado exclusivamente a maiores de 18 anos.</p>
+        <h2>Perguntas frequentes</h2>
+        <h3>O Laora é grátis?</h3>
+        <p>Sim. Você pode criar sua conta, montar seu perfil, descobrir pessoas, encontrar matches recíprocos e conversar pelo Laora.</p>
+        <h3>Como funciona o match?</h3>
+        <p>O match acontece quando duas pessoas demonstram interesse uma na outra. Depois do interesse recíproco, a conversa é liberada para os dois.</p>
+        <h3>Minha localização exata aparece para outras pessoas?</h3>
+        <p>Não. A localização exata não é exibida publicamente e é usada somente para ajudar a calcular a distância entre perfis.</p>
       </section>
     </main>
   </div>
