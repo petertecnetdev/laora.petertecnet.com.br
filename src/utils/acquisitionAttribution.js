@@ -4,9 +4,15 @@ const APP_SLUG = import.meta.env.VITE_APP_SLUG || 'laora';
 const ATTRIBUTION_KEY = `peter:${APP_SLUG}:acquisition-attribution`;
 const ALLOWED_UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
 const MAX_VALUE_LENGTH = 160;
+const ATTRIBUTION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 function safeValue(value) {
   return String(value || '').trim().slice(0, MAX_VALUE_LENGTH);
+}
+
+function removeStoredAttribution() {
+  try { window.localStorage.removeItem(ATTRIBUTION_KEY); }
+  catch { /* Attribution cleanup must never block the product. */ }
 }
 
 export function readAcquisitionAttribution() {
@@ -14,14 +20,30 @@ export function readAcquisitionAttribution() {
     const raw = window.localStorage.getItem(ATTRIBUTION_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' ? parsed : null;
+    if (!parsed || typeof parsed !== 'object') {
+      removeStoredAttribution();
+      return null;
+    }
+
+    const capturedAt = Date.parse(parsed.captured_at || '');
+    if (!Number.isFinite(capturedAt) || Date.now() - capturedAt > ATTRIBUTION_TTL_MS || capturedAt > Date.now() + 5 * 60 * 1000) {
+      removeStoredAttribution();
+      return null;
+    }
+
+    return parsed;
   } catch {
+    removeStoredAttribution();
     return null;
   }
 }
 
 export function installAcquisitionAttribution() {
   try {
+    // Expire stale or malformed attribution on every app bootstrap so old
+    // campaigns cannot claim conversions indefinitely.
+    readAcquisitionAttribution();
+
     const params = new URLSearchParams(window.location.search);
     const attribution = {};
 
