@@ -10,6 +10,7 @@ import { installPeterWhatsappFallback } from './utils/peterWhatsappFallback';
 import { installDiscoveryRecovery } from './utils/discoveryRecovery';
 import { installAcquisitionAttribution } from './utils/acquisitionAttribution';
 import { installProfileActivationGuide } from './utils/profileActivation';
+import { installChunkRecovery } from './utils/chunkRecovery';
 import './styles.css';
 import './nexus-mobile-nav.css';
 import './processing.css';
@@ -25,6 +26,7 @@ installPeterWhatsappFallback();
 installDiscoveryRecovery();
 installAcquisitionAttribution();
 installProfileActivationGuide();
+installChunkRecovery();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
