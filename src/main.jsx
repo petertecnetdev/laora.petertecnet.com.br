@@ -5,6 +5,7 @@ import App from './App';
 import GlobalImageInputEnhancer from './components/GlobalImageInputEnhancer';
 import PeterAccountGateway from './components/PeterAccountGateway';
 import PwaInstallButton from './components/PwaInstallButton';
+import RuntimeErrorBoundary from './components/RuntimeErrorBoundary';
 import { installGlobalImageFallbacks } from './utils/imageFallback';
 import { installPasswordVisibilityToggles } from './utils/passwordVisibility';
 import { installPeterWhatsappFallback } from './utils/peterWhatsappFallback';
@@ -39,12 +40,14 @@ installRouteSeo();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <PeterAccountGateway apiBaseUrl={API_BASE_URL} appSlug={APP_SLUG}>
-        <App />
-        <GlobalImageInputEnhancer />
-        <PwaInstallButton />
-      </PeterAccountGateway>
-    </BrowserRouter>
+    <RuntimeErrorBoundary>
+      <BrowserRouter>
+        <PeterAccountGateway apiBaseUrl={API_BASE_URL} appSlug={APP_SLUG}>
+          <App />
+          <GlobalImageInputEnhancer />
+          <PwaInstallButton />
+        </PeterAccountGateway>
+      </BrowserRouter>
+    </RuntimeErrorBoundary>
   </React.StrictMode>
 );
