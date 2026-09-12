@@ -14,6 +14,20 @@
     {"src":"/pwa-icon.svg","sizes":"512x512","type":"image/svg+xml","purpose":"any"},
     {"src":"/pwa-icon.svg","sizes":"any","type":"image/svg+xml","purpose":"maskable"}
   ],
+  "shortcuts": [
+    {
+      "name": "Criar conta",
+      "short_name": "Criar conta",
+      "description": "Abra diretamente o cadastro da Laora.",
+      "url": "/cadastro?utm_source=pwa&utm_medium=shortcut&utm_campaign=activation"
+    },
+    {
+      "name": "Descobrir pessoas",
+      "short_name": "Descobrir",
+      "description": "Volte rapidamente para descobrir novas conexões.",
+      "url": "/?utm_source=pwa&utm_medium=shortcut&utm_campaign=retention"
+    }
+  ],
   "prefer_related_applications": false,
   "related_applications": [
     {
