@@ -3,6 +3,34 @@ import { recordFunnelEvent } from '../services/api';
 const INVITE_MARKER = 'data-laora-organic-invite';
 const INVITE_URL = 'https://laora.petertecnet.com.br/?utm_source=laora&utm_medium=referral&utm_campaign=member_invite';
 
+const copyInviteFallback = (text) => {
+  const input = document.createElement('textarea');
+  input.value = text;
+  input.setAttribute('readonly', '');
+  input.setAttribute('aria-hidden', 'true');
+  input.style.position = 'fixed';
+  input.style.opacity = '0';
+  input.style.pointerEvents = 'none';
+  document.body.appendChild(input);
+  input.select();
+  input.setSelectionRange(0, input.value.length);
+  const copied = document.execCommand?.('copy') === true;
+  input.remove();
+  if (!copied) throw new Error('Clipboard unavailable');
+};
+
+const copyInvite = async (text) => {
+  if (navigator.clipboard?.writeText && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      // Some installed PWAs and embedded browsers expose Clipboard but deny it.
+    }
+  }
+  copyInviteFallback(text);
+};
+
 const shareInvite = async () => {
   const payload = {
     title: 'Laora — conexões reais',
@@ -17,12 +45,13 @@ const shareInvite = async () => {
       return;
     }
 
-    await navigator.clipboard.writeText(`${payload.text} ${payload.url}`);
+    await copyInvite(`${payload.text} ${payload.url}`);
     recordFunnelEvent('acquisition_referral_copied', 'acquisition', false);
     window.dispatchEvent(new CustomEvent('laora:invite-copied'));
   } catch (error) {
     if (error?.name !== 'AbortError') {
       recordFunnelEvent('acquisition_referral_failed', 'acquisition', false);
+      window.dispatchEvent(new CustomEvent('laora:invite-copy-failed'));
     }
   }
 };
@@ -47,6 +76,17 @@ const enhanceEmptyDiscovery = () => {
   });
 };
 
+const showInviteToast = (message, type) => {
+  const existing = document.querySelector('[data-laora-invite-toast]');
+  if (existing) existing.remove();
+  const toast = document.createElement('div');
+  toast.dataset.laoraInviteToast = '1';
+  toast.className = `p-toast ${type}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  window.setTimeout(() => toast.remove(), 3200);
+};
+
 export const installOrganicReferralLoop = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
@@ -54,15 +94,8 @@ export const installOrganicReferralLoop = () => {
   const observer = new MutationObserver(enhanceEmptyDiscovery);
   observer.observe(document.documentElement, { childList: true, subtree: true });
 
-  const copied = () => {
-    const existing = document.querySelector('[data-laora-invite-toast]');
-    if (existing) existing.remove();
-    const toast = document.createElement('div');
-    toast.dataset.laoraInviteToast = '1';
-    toast.className = 'p-toast success';
-    toast.textContent = 'Convite copiado. Compartilhe com alguém da sua região.';
-    document.body.appendChild(toast);
-    window.setTimeout(() => toast.remove(), 3200);
-  };
+  const copied = () => showInviteToast('Convite copiado. Compartilhe com alguém da sua região.', 'success');
+  const copyFailed = () => showInviteToast('Não foi possível copiar o convite neste navegador.', 'error');
   window.addEventListener('laora:invite-copied', copied);
+  window.addEventListener('laora:invite-copy-failed', copyFailed);
 };
