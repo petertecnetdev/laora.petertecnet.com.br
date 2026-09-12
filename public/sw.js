@@ -1,6 +1,17 @@
-const CACHE_NAME = 'laora-shell-v3';
+const CACHE_NAME = 'laora-shell-v4';
 const APP_SHELL = ['/', '/pwa-icon.svg'];
 const NETWORK_FIRST_PATHS = new Set(['/manifest.json', '/sw.js']);
+const NAVIGATION_TIMEOUT_MS = 4500;
+
+const fetchNavigationWithTimeout = async (request) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), NAVIGATION_TIMEOUT_MS);
+  try {
+    return await fetch(request, { signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+};
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -26,7 +37,7 @@ self.addEventListener('fetch', (event) => {
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
+      fetchNavigationWithTimeout(event.request)
         .then((response) => {
           if (response.ok) {
             const copy = response.clone();
@@ -34,7 +45,14 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() => caches.match('/')),
+        .catch(async () => {
+          const cached = await caches.match('/');
+          if (cached) return cached;
+          return new Response('Laora está temporariamente indisponível. Verifique sua conexão e tente novamente.', {
+            status: 503,
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+          });
+        }),
     );
     return;
   }
