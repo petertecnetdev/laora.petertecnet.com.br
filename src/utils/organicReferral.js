@@ -1,7 +1,7 @@
 import { recordFunnelEvent } from '../services/api';
 
 const INVITE_MARKER = 'data-laora-organic-invite';
-const INVITE_URL = 'https://laora.petertecnet.com.br/?utm_source=laora&utm_medium=referral&utm_campaign=member_invite';
+const INVITE_URL = 'https://laora.petertecnet.com.br/register?utm_source=laora&utm_medium=referral&utm_campaign=member_invite';
 
 const copyInviteFallback = (text) => {
   const input = document.createElement('textarea');
