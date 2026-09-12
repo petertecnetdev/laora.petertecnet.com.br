@@ -17,7 +17,10 @@ function requiredFields(form) {
 
 function isFilled(field, form) {
   if (field.type === 'radio' && field.name) {
-    return Array.from(form.elements[field.name] || []).some((option) => option.checked);
+    const group = form.elements.namedItem(field.name);
+    if (!group) return false;
+    if (typeof group.length !== 'number') return Boolean(group.checked);
+    return Array.from(group).some((option) => option.checked);
   }
   if (field.type === 'checkbox') return field.checked;
   return String(field.value || '').trim().length > 0 && field.checkValidity();
