@@ -14,6 +14,7 @@ import { installChunkRecovery } from './utils/chunkRecovery';
 import { installRuntimeReliabilityTelemetry } from './utils/runtimeReliability';
 import { installOrganicReferralLoop } from './utils/organicReferral';
 import { installAuthDeepLinks } from './utils/authDeepLinks';
+import { installRouteSeo } from './utils/routeSeo';
 import './styles.css';
 import './nexus-mobile-nav.css';
 import './processing.css';
@@ -33,6 +34,7 @@ installChunkRecovery();
 installRuntimeReliabilityTelemetry();
 installOrganicReferralLoop();
 installAuthDeepLinks();
+installRouteSeo();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
