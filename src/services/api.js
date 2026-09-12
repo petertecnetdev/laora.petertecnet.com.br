@@ -20,6 +20,7 @@ const canonicalConnectionUrl = (url = '') => {
   let canonical = path;
   if (path === '/laora/profile') canonical = `${CONNECTIONS_BASE}/profile`;
   else if (path === '/laora/profile/photos') canonical = `${CONNECTIONS_BASE}/profile/photos`;
+  else if (path === '/laora/profile/photos/reorder') canonical = `${CONNECTIONS_BASE}/profile/photos/reorder`;
   else if (/^\/laora\/profile\/photos\/\d+$/.test(path)) canonical = path.replace('/laora/profile/photos/', `${CONNECTIONS_BASE}/profile/photos/`);
   else if (path === '/laora/discover') canonical = `${CONNECTIONS_BASE}/discover`;
   else if (path === '/laora/swipes') canonical = `${CONNECTIONS_BASE}/decisions`;
@@ -111,8 +112,7 @@ api.interceptors.request.use((config) => {
   config.headers['X-Frontend-Page'] = window.location.pathname;
   const originalUrl = String(config?.url || '');
   if (String(config?.method || '').toLowerCase() === 'post' && originalUrl.split('?')[0] === '/laora/swipes') config.__peterSwipeAction = config?.data?.action;
-  // Keep photo reordering on the compatibility endpoint until the generic Connections API exposes an equivalent contract.
-  if (originalUrl.split('?')[0] !== '/laora/profile/photos/reorder') config.url = canonicalConnectionUrl(originalUrl);
+  config.url = canonicalConnectionUrl(originalUrl);
   if (isMultipartUpload(config) && (!config.timeout || config.timeout === DEFAULT_TIMEOUT_MS)) config.timeout = UPLOAD_TIMEOUT_MS;
   if (isVerificationResend(config)) {
     if (verificationResendInFlight) return Promise.reject(new Error('O reenvio do código já está em andamento.'));
