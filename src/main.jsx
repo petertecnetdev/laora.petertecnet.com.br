@@ -13,6 +13,7 @@ import { installProfileActivationGuide } from './utils/profileActivation';
 import { installChunkRecovery } from './utils/chunkRecovery';
 import { installRuntimeReliabilityTelemetry } from './utils/runtimeReliability';
 import { installOrganicReferralLoop } from './utils/organicReferral';
+import { installAuthDeepLinks } from './utils/authDeepLinks';
 import './styles.css';
 import './nexus-mobile-nav.css';
 import './processing.css';
@@ -31,6 +32,7 @@ installProfileActivationGuide();
 installChunkRecovery();
 installRuntimeReliabilityTelemetry();
 installOrganicReferralLoop();
+installAuthDeepLinks();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
