@@ -37,6 +37,7 @@ const shareInvite = async () => {
     text: 'Conheça o Laora: um app para conhecer pessoas, dar match e conversar com segurança.',
     url: INVITE_URL,
   };
+  const inviteText = `${payload.text} ${payload.url}`;
 
   try {
     if (navigator.share) {
@@ -45,7 +46,18 @@ const shareInvite = async () => {
       return;
     }
 
-    await copyInvite(`${payload.text} ${payload.url}`);
+    // Desktop browsers frequently lack Web Share. Hand the invite directly to
+    // WhatsApp Web instead of making the user copy, switch apps and paste.
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(inviteText)}`;
+    const whatsappWindow = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    if (whatsappWindow) {
+      recordFunnelEvent('acquisition_referral_whatsapp_opened', 'acquisition', false);
+      return;
+    }
+
+    // Popup blockers can reject window.open even from a click. Keep clipboard
+    // as the final fallback so acquisition never depends on one browser API.
+    await copyInvite(inviteText);
     recordFunnelEvent('acquisition_referral_copied', 'acquisition', false);
     window.dispatchEvent(new CustomEvent('laora:invite-copied'));
   } catch (error) {
