@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
+import GlobalImageInputEnhancer from './components/GlobalImageInputEnhancer';
 import PeterAccountGateway from './components/PeterAccountGateway';
 import PwaInstallButton from './components/PwaInstallButton';
 import { installGlobalImageFallbacks } from './utils/imageFallback';
@@ -41,6 +42,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <PeterAccountGateway apiBaseUrl={API_BASE_URL} appSlug={APP_SLUG}>
         <App />
+        <GlobalImageInputEnhancer />
         <PwaInstallButton />
       </PeterAccountGateway>
     </BrowserRouter>
