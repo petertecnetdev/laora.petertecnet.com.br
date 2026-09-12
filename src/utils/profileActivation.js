@@ -2,6 +2,7 @@ import { recordFunnelEvent } from '../services/api';
 
 const HOST_ATTR = 'data-laora-profile-activation';
 const COMPLETE_EVENT_KEY = 'peter:laora:profile-activation-complete';
+const PROFILE_FORM_SELECTOR = 'form.p-form';
 
 function requiredFields(form) {
   const fields = Array.from(form.querySelectorAll('input[required], select[required], textarea[required]'));
@@ -70,11 +71,19 @@ function enhance(form) {
   update();
 }
 
+function enhanceAddedNode(node) {
+  if (!(node instanceof Element)) return;
+  if (node.matches(PROFILE_FORM_SELECTOR)) enhance(node);
+  node.querySelectorAll?.(PROFILE_FORM_SELECTOR).forEach(enhance);
+}
+
 export function installProfileActivationGuide() {
   if (typeof document === 'undefined') return () => {};
-  const scan = () => document.querySelectorAll('form.p-form').forEach(enhance);
-  scan();
-  const observer = new MutationObserver(scan);
+  document.querySelectorAll(PROFILE_FORM_SELECTOR).forEach(enhance);
+
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => mutation.addedNodes.forEach(enhanceAddedNode));
+  });
   observer.observe(document.body, { childList: true, subtree: true });
   return () => observer.disconnect();
 }
