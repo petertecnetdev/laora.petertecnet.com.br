@@ -4,6 +4,8 @@ const buttonWithText = (root, text) => Array.from(root.querySelectorAll('button'
   (button) => button.textContent?.trim() === text,
 );
 
+const notifyNavigation = () => window.dispatchEvent(new Event('laora:navigation'));
+
 export const installAuthDeepLinks = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') return () => {};
 
@@ -42,9 +44,11 @@ export const installAuthDeepLinks = () => {
     if (label === 'Criar uma conta' && window.location.pathname !== REGISTER_PATH) {
       window.history.pushState({}, '', REGISTER_PATH + window.location.search + window.location.hash);
       registerActivated = true;
+      notifyNavigation();
     } else if (label === 'Voltar para o login' && window.location.pathname === REGISTER_PATH) {
       window.history.replaceState({}, '', '/' + window.location.search + window.location.hash);
       registerActivated = false;
+      notifyNavigation();
     }
   };
 
