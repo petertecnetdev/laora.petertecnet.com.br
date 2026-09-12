@@ -4,11 +4,22 @@ const HOST_ATTR = 'data-laora-profile-activation';
 const COMPLETE_EVENT_KEY = 'peter:laora:profile-activation-complete';
 
 function requiredFields(form) {
-  return Array.from(form.querySelectorAll('input[required], select[required], textarea[required]'));
+  const fields = Array.from(form.querySelectorAll('input[required], select[required], textarea[required]'));
+  const seenRadioGroups = new Set();
+
+  return fields.filter((field) => {
+    if (field.type !== 'radio' || !field.name) return true;
+    if (seenRadioGroups.has(field.name)) return false;
+    seenRadioGroups.add(field.name);
+    return true;
+  });
 }
 
-function isFilled(field) {
-  if (field.type === 'checkbox' || field.type === 'radio') return field.checked;
+function isFilled(field, form) {
+  if (field.type === 'radio' && field.name) {
+    return Array.from(form.elements[field.name] || []).some((option) => option.checked);
+  }
+  if (field.type === 'checkbox') return field.checked;
   return String(field.value || '').trim().length > 0 && field.checkValidity();
 }
 
@@ -27,11 +38,11 @@ function enhance(form) {
 
   const update = () => {
     const fields = requiredFields(form);
-    const filled = fields.filter(isFilled).length;
+    const filled = fields.filter((field) => isFilled(field, form)).length;
     const percent = fields.length ? Math.round((filled / fields.length) * 100) : 100;
     progress.value = percent;
     label.textContent = `${percent}% concluído`;
-    const missing = fields.find((field) => !isFilled(field));
+    const missing = fields.find((field) => !isFilled(field, form));
     button.hidden = !missing;
     button.onclick = () => {
       missing?.scrollIntoView({ behavior: 'smooth', block: 'center' });
