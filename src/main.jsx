@@ -12,6 +12,7 @@ import { installAcquisitionAttribution } from './utils/acquisitionAttribution';
 import { installProfileActivationGuide } from './utils/profileActivation';
 import { installChunkRecovery } from './utils/chunkRecovery';
 import { installRuntimeReliabilityTelemetry } from './utils/runtimeReliability';
+import { installOrganicReferralLoop } from './utils/organicReferral';
 import './styles.css';
 import './nexus-mobile-nav.css';
 import './processing.css';
@@ -29,6 +30,7 @@ installAcquisitionAttribution();
 installProfileActivationGuide();
 installChunkRecovery();
 installRuntimeReliabilityTelemetry();
+installOrganicReferralLoop();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
