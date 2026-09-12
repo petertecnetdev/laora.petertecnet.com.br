@@ -9,19 +9,31 @@ export const installAuthDeepLinks = () => {
 
   let registerActivated = false;
 
-  const activateRegisterDeepLink = () => {
-    if (window.location.pathname !== REGISTER_PATH || registerActivated) return;
+  const syncAuthViewWithLocation = () => {
     const authCard = document.querySelector('.p-auth-card');
     if (!authCard) return;
-    const registerButton = buttonWithText(authCard, 'Criar uma conta');
-    if (!registerButton) return;
-    registerActivated = true;
-    registerButton.click();
+
+    if (window.location.pathname === REGISTER_PATH) {
+      const registerButton = buttonWithText(authCard, 'Criar uma conta');
+      if (!registerButton || registerActivated) return;
+      registerActivated = true;
+      registerButton.click();
+      return;
+    }
+
+    const loginButton = buttonWithText(authCard, 'Voltar para o login');
+    if (!loginButton) {
+      registerActivated = false;
+      return;
+    }
+
+    registerActivated = false;
+    loginButton.click();
   };
 
-  const observer = new MutationObserver(activateRegisterDeepLink);
+  const observer = new MutationObserver(syncAuthViewWithLocation);
   observer.observe(document.documentElement, { childList: true, subtree: true });
-  activateRegisterDeepLink();
+  syncAuthViewWithLocation();
 
   const onClick = (event) => {
     const button = event.target?.closest?.('.p-auth-card button');
@@ -36,9 +48,16 @@ export const installAuthDeepLinks = () => {
     }
   };
 
+  const onPopState = () => {
+    registerActivated = false;
+    syncAuthViewWithLocation();
+  };
+
   document.addEventListener('click', onClick);
+  window.addEventListener('popstate', onPopState);
   return () => {
     observer.disconnect();
     document.removeEventListener('click', onClick);
+    window.removeEventListener('popstate', onPopState);
   };
 };
