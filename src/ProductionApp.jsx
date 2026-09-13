@@ -4,7 +4,7 @@ import {
   FiHeart, FiLock, FiLogOut, FiMapPin, FiMessageCircle, FiRefreshCw, FiSend,
   FiSettings, FiShield, FiTrash2, FiUser, FiX,
 } from 'react-icons/fi';
-import api from './services/api';
+import api, { recordFunnelEvent } from './services/api';
 import { createLaoraRealtime } from './services/realtime';
 import './production.css';
 
@@ -264,7 +264,7 @@ export default function ProductionApp() {
   const notify = useCallback((message, type = 'success') => { setToast({ message, type }); window.setTimeout(() => setToast(null), 4200); }, []);
   const loadProfile = useCallback(async () => { const [p, u] = await Promise.all([api.get('/laora/profile'), api.get('/auth/me')]); setProfile(p.data.data); setVerified(Boolean(p.data.meta?.email_verified || u.data.user?.email_verified_at)); setMe(u.data.user); if (u.data.user) localStorage.setItem('user', JSON.stringify(u.data.user)); return p.data.data; }, []);
   const loadDiscover = useCallback(async () => { try { const { data } = await api.get('/laora/discover'); setProfiles(data.data || []); } catch (e) { if (e.response?.status !== 403) notify(errorMessage(e), 'error'); } }, [notify]);
-  const loadMatches = useCallback(async () => { try { const { data } = await api.get('/laora/matches?limit=100'); setMatches(data.data || []); } catch (e) { if (e.response?.status !== 403) notify(errorMessage(e), 'error'); } }, [notify]);
+  const loadMatches = useCallback(async () => { try { const { data } = await api.get('/laora/matches?limit=100'); const nextMatches = data.data || []; setMatches(nextMatches); return nextMatches; } catch (e) { if (e.response?.status !== 403) notify(errorMessage(e), 'error'); return []; } }, [notify]);
 
   const bootstrap = useCallback(async () => {
     if (!localStorage.getItem('token')) { setAuthenticated(false); setLoading(false); return; }
@@ -295,7 +295,20 @@ export default function ProductionApp() {
     return () => { window.clearInterval(id); document.removeEventListener('visibilitychange', onVisibilityChange); };
   }, [authenticated, verified, chat?.id, loadMatches]);
 
-  const swipe = async (target, action) => { try { const { data } = await api.post('/laora/swipes', { target_user_id: target, action }); setProfiles((v) => v.filter((p) => p.user_id !== target)); if (data.data?.matched) { notify('É match! A conexão apareceu para vocês dois.'); await loadMatches(); } } catch (e) { notify(errorMessage(e), 'error'); } };
+  const swipe = async (target, action) => {
+    try {
+      const { data } = await api.post('/laora/swipes', { target_user_id: target, action });
+      setProfiles((v) => v.filter((p) => p.user_id !== target));
+      if (data.data?.matched) {
+        notify('É match! Abrindo a conversa para vocês começarem agora.');
+        const refreshedMatches = await loadMatches();
+        const matchedConnection = refreshedMatches.find((match) => String(match.profile?.user_id) === String(target));
+        recordFunnelEvent('activation_match_chat_handoff', 'activation', false);
+        if (matchedConnection) await openChat(matchedConnection);
+        else setTab('matches');
+      }
+    } catch (e) { notify(errorMessage(e), 'error'); }
+  };
   const openSafety = (target, matchId = null) => setSafety({ ...target, match_id: matchId });
   const unmatch = async (match) => { if (!window.confirm(`Desfazer o match com ${match.profile?.display_name}?`)) return; try { await api.delete(`/laora/matches/${match.id}`); if (chat?.id === match.id) setChat(null); await loadMatches(); } catch (e) { notify(errorMessage(e), 'error'); } };
   const loadMessages = async (matchId, older = false, silent = false) => { if (!silent) setMessageLoading(true); try { const before = older ? messages[0]?.id : null; const { data } = await api.get(`/laora/matches/${matchId}/messages?limit=50${before ? `&before_id=${before}` : ''}`); setMessages((v) => older ? [...(data.data || []), ...v] : (data.data || [])); setMessagesMeta(data.meta || {}); await loadMatches(); } catch (e) { if (!silent) notify(errorMessage(e), 'error'); } finally { if (!silent) setMessageLoading(false); } };
