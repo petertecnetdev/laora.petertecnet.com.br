@@ -49,6 +49,16 @@ function focusStep(step) {
   recordFunnelEvent('activation_profile_recovery_clicked', 'activation');
 }
 
+function openDiscovery() {
+  const discoveryButton = Array.from(document.querySelectorAll('.p-top nav button')).find(
+    (button) => button.textContent?.includes('Descobrir'),
+  );
+  if (!discoveryButton) return;
+  recordFunnelEvent('activation_discovery_handoff_clicked', 'activation');
+  discoveryButton.click();
+  window.scrollTo?.({ top: 0, behavior: 'smooth' });
+}
+
 function enhance(form) {
   if (!form || form.querySelector(`[${HOST_ATTR}]`)) return;
 
@@ -70,8 +80,9 @@ function enhance(form) {
 
     progress.value = percent;
     label.textContent = missing ? `${percent}% pronto · ${missing.label}` : '100% pronto para descoberta';
-    button.hidden = !missing;
-    button.onclick = () => focusStep(missing);
+    button.hidden = false;
+    button.textContent = missing ? 'Continuar preenchimento' : 'Começar a descobrir';
+    button.onclick = missing ? () => focusStep(missing) : openDiscovery;
 
     if (!missing) {
       host.classList.add('complete');
