@@ -6,6 +6,12 @@ const buttonWithText = (root, text) => Array.from(root.querySelectorAll('button'
 
 const notifyNavigation = () => window.dispatchEvent(new Event('laora:navigation'));
 
+const normalizeAuthenticatedRoute = () => {
+  if (window.location.pathname !== REGISTER_PATH || !localStorage.getItem('token')) return;
+  window.history.replaceState({}, '', '/' + window.location.search + window.location.hash);
+  notifyNavigation();
+};
+
 export const installAuthDeepLinks = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') return () => {};
 
@@ -35,6 +41,7 @@ export const installAuthDeepLinks = () => {
 
   const observer = new MutationObserver(syncAuthViewWithLocation);
   observer.observe(document.documentElement, { childList: true, subtree: true });
+  normalizeAuthenticatedRoute();
   syncAuthViewWithLocation();
 
   const onClick = (event) => {
@@ -54,14 +61,22 @@ export const installAuthDeepLinks = () => {
 
   const onPopState = () => {
     registerActivated = false;
+    normalizeAuthenticatedRoute();
     syncAuthViewWithLocation();
+  };
+
+  const onAuthChanged = () => {
+    registerActivated = false;
+    normalizeAuthenticatedRoute();
   };
 
   document.addEventListener('click', onClick);
   window.addEventListener('popstate', onPopState);
+  window.addEventListener('authChanged', onAuthChanged);
   return () => {
     observer.disconnect();
     document.removeEventListener('click', onClick);
     window.removeEventListener('popstate', onPopState);
+    window.removeEventListener('authChanged', onAuthChanged);
   };
 };
