@@ -33,9 +33,12 @@ export function installDiscoveryDecisionGuard() {
 
     card.setAttribute(LOCK_ATTR, '1');
     lockedCard = card;
-    card.querySelectorAll(ACTION_SELECTOR).forEach((action) => {
-      action.disabled = true;
-      action.setAttribute('aria-busy', 'true');
+    queueMicrotask(() => {
+      if (lockedCard !== card || !document.body.contains(card)) return;
+      card.querySelectorAll(ACTION_SELECTOR).forEach((action) => {
+        action.disabled = true;
+        action.setAttribute('aria-busy', 'true');
+      });
     });
     timer = window.setTimeout(unlock, LOCK_TIMEOUT_MS);
   };
