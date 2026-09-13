@@ -219,8 +219,20 @@ function Matches({ matches, openChat, unmatch, report }) {
 
 function Chat({ match, messages, loading, hasMore, loadOlder, send, close, report }) {
   const [body, setBody] = useState('');
-  const submit = (e) => { e.preventDefault(); const text = body.trim(); if (!text) return; send(text); setBody(''); };
-  return <div className="p-chat"><header><button onClick={close}>←</button><div><b>{match.profile?.display_name}</b><small>Match seguro · chat após reciprocidade</small></div><button onClick={() => report(match.profile, match.id)}><FiShield /></button></header><main>{hasMore && <button className="p-older" onClick={loadOlder}>Carregar mensagens anteriores</button>}{loading ? <Busy /> : messages.map((m) => <div className={`p-message ${m.sender_user_id === Number(JSON.parse(localStorage.getItem('user') || '{}').id) ? 'mine' : ''}`} key={m.id}><p>{m.body}</p><small>{m.read_at ? 'Lida' : 'Enviada'} · {new Date(m.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</small></div>)}</main><form onSubmit={submit}><input maxLength={3000} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Escreva uma mensagem…" /><button><FiSend /></button></form></div>;
+  const [sending, setSending] = useState(false);
+  const submit = async (e) => {
+    e.preventDefault();
+    const text = body.trim();
+    if (!text || sending) return;
+    setSending(true);
+    try {
+      await send(text);
+      setBody((current) => current.trim() === text ? '' : current);
+    } finally {
+      setSending(false);
+    }
+  };
+  return <div className="p-chat"><header><button onClick={close}>←</button><div><b>{match.profile?.display_name}</b><small>Match seguro · chat após reciprocidade</small></div><button onClick={() => report(match.profile, match.id)}><FiShield /></button></header><main>{hasMore && <button className="p-older" onClick={loadOlder}>Carregar mensagens anteriores</button>}{loading ? <Busy /> : messages.map((m) => <div className={`p-message ${m.sender_user_id === Number(JSON.parse(localStorage.getItem('user') || '{}').id) ? 'mine' : ''}`} key={m.id}><p>{m.body}</p><small>{m.read_at ? 'Lida' : 'Enviada'} · {new Date(m.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</small></div>)}</main><form onSubmit={submit}><input maxLength={3000} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Escreva uma mensagem…" disabled={sending} /><button disabled={sending} aria-label={sending ? "Enviando mensagem" : "Enviar mensagem"}><FiSend /></button></form></div>;
 }
 
 function SafetyModal({ target, onClose, notify, afterAction }) {
@@ -288,7 +300,18 @@ export default function ProductionApp() {
   const unmatch = async (match) => { if (!window.confirm(`Desfazer o match com ${match.profile?.display_name}?`)) return; try { await api.delete(`/laora/matches/${match.id}`); if (chat?.id === match.id) setChat(null); await loadMatches(); } catch (e) { notify(errorMessage(e), 'error'); } };
   const loadMessages = async (matchId, older = false, silent = false) => { if (!silent) setMessageLoading(true); try { const before = older ? messages[0]?.id : null; const { data } = await api.get(`/laora/matches/${matchId}/messages?limit=50${before ? `&before_id=${before}` : ''}`); setMessages((v) => older ? [...(data.data || []), ...v] : (data.data || [])); setMessagesMeta(data.meta || {}); await loadMatches(); } catch (e) { if (!silent) notify(errorMessage(e), 'error'); } finally { if (!silent) setMessageLoading(false); } };
   const openChat = async (match) => { setChat(match); setMessages([]); await loadMessages(match.id); };
-  const send = async (body) => { try { const { data } = await api.post(`/laora/matches/${chat.id}/messages`, { body }); setMessages((v) => [...v, data.data]); await loadMatches(); } catch (e) { notify(errorMessage(e), 'error'); } };
+  const send = async (body) => {
+    try {
+      const { data } = await api.post(`/laora/matches/${chat.id}/messages`, { body });
+      const message = data.data;
+      setMessages((v) => v.some((m) => m.id === message.id) ? v : [...v, message]);
+      await loadMatches();
+      return message;
+    } catch (e) {
+      notify(errorMessage(e), 'error');
+      throw e;
+    }
+  };
   const logout = async () => { try { await api.post('/auth/logout'); } catch { /* noop */ } localStorage.clear(); setAuthenticated(false); setMe(null); setProfile(null); };
 
   if (!authenticated) return <><Auth onAuthenticated={bootstrap} notify={notify} /><Toast toast={toast} /></>;
