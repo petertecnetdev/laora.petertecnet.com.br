@@ -1,4 +1,4 @@
-const BASE_TITLE = 'Laora | App de relacionamento grátis e conexões reais';
+const UNREAD_TITLE_MARKER = ' · Laora';
 
 const readUnreadCount = (root = document) => {
   const navButtons = [...root.querySelectorAll('.p-top nav button')];
@@ -8,12 +8,7 @@ const readUnreadCount = (root = document) => {
   return Number.isFinite(count) && count > 0 ? count : 0;
 };
 
-const applyUnreadTitle = (root = document) => {
-  const unread = readUnreadCount(root);
-  document.title = unread > 0
-    ? `(${unread}) ${unread === 1 ? 'nova mensagem' : 'novas mensagens'} · Laora`
-    : BASE_TITLE;
-};
+const isUnreadTitle = (title) => /^\(\d+\) (?:nova mensagem|novas mensagens) · Laora$/.test(title);
 
 export const installUnreadReengagement = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') return () => {};
@@ -22,6 +17,19 @@ export const installUnreadReengagement = () => {
   let navObserver = null;
   let observedNav = null;
   let bootstrapObserver = null;
+  let baseTitle = document.title;
+
+  const applyUnreadTitle = () => {
+    const unread = readUnreadCount();
+    const currentTitle = document.title;
+
+    // Keep route/SEO context if another part of the SPA changed the page title.
+    if (!isUnreadTitle(currentTitle)) baseTitle = currentTitle;
+
+    document.title = unread > 0
+      ? `(${unread}) ${unread === 1 ? 'nova mensagem' : 'novas mensagens'}${UNREAD_TITLE_MARKER}`
+      : baseTitle;
+  };
 
   const schedule = () => {
     if (frame !== null) return;
@@ -53,6 +61,8 @@ export const installUnreadReengagement = () => {
     bootstrapObserver?.disconnect();
     bootstrapObserver = null;
 
+    if (!isUnreadTitle(document.title)) baseTitle = document.title;
+
     if (!observeNavigation()) {
       bootstrapObserver = new MutationObserver(observeNavigation);
       bootstrapObserver.observe(document.body, { childList: true, subtree: true });
@@ -70,6 +80,6 @@ export const installUnreadReengagement = () => {
     window.removeEventListener('authChanged', bootstrapNavigation);
     document.removeEventListener('visibilitychange', schedule);
     if (frame !== null) window.cancelAnimationFrame(frame);
-    document.title = BASE_TITLE;
+    if (isUnreadTitle(document.title)) document.title = baseTitle;
   };
 };
