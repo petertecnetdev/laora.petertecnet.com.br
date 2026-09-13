@@ -1,41 +1,43 @@
 const BASE_TITLE = 'Laora | App de relacionamento grátis e conexões reais';
+const UNREAD_EVENT = 'laora:unread-count';
 
-const readUnreadCount = () => {
-  const navButtons = [...document.querySelectorAll('.p-top nav button')];
-  const matchesButton = navButtons.find((button) => button.textContent?.includes('Matches'));
-  const badge = matchesButton?.querySelector('b');
-  const count = Number.parseInt(badge?.textContent || '0', 10);
+let unreadCount = 0;
+
+const normalizeUnreadCount = (value) => {
+  const count = Number.parseInt(String(value ?? 0), 10);
   return Number.isFinite(count) && count > 0 ? count : 0;
 };
 
 const applyUnreadTitle = () => {
-  const unread = readUnreadCount();
-  document.title = unread > 0
-    ? `(${unread}) ${unread === 1 ? 'nova mensagem' : 'novas mensagens'} · Laora`
+  document.title = unreadCount > 0
+    ? `(${unreadCount}) ${unreadCount === 1 ? 'nova mensagem' : 'novas mensagens'} · Laora`
     : BASE_TITLE;
+};
+
+export const publishUnreadCount = (value) => {
+  unreadCount = normalizeUnreadCount(value);
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(UNREAD_EVENT, { detail: { count: unreadCount } }));
 };
 
 export const installUnreadReengagement = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') return () => {};
 
-  let frame = null;
-  const schedule = () => {
-    if (frame !== null) return;
-    frame = window.requestAnimationFrame(() => {
-      frame = null;
-      applyUnreadTitle();
-    });
+  const onUnreadCount = (event) => {
+    unreadCount = normalizeUnreadCount(event?.detail?.count);
+    applyUnreadTitle();
+  };
+  const onVisibilityChange = () => {
+    if (document.visibilityState === 'visible') applyUnreadTitle();
   };
 
-  const observer = new MutationObserver(schedule);
-  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-  document.addEventListener('visibilitychange', schedule);
-  schedule();
+  window.addEventListener(UNREAD_EVENT, onUnreadCount);
+  document.addEventListener('visibilitychange', onVisibilityChange);
+  applyUnreadTitle();
 
   return () => {
-    observer.disconnect();
-    document.removeEventListener('visibilitychange', schedule);
-    if (frame !== null) window.cancelAnimationFrame(frame);
+    window.removeEventListener(UNREAD_EVENT, onUnreadCount);
+    document.removeEventListener('visibilitychange', onVisibilityChange);
     document.title = BASE_TITLE;
   };
 };
