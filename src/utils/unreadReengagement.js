@@ -8,7 +8,7 @@ const readUnreadCount = (root = document) => {
   return Number.isFinite(count) && count > 0 ? count : 0;
 };
 
-const isUnreadTitle = (title) => /^\(\d+\) novas? mensagens? · Laora$/.test(title);
+const isUnreadTitle = (title) => /^\(\d+\) (?:nova mensagem|novas mensagens) · Laora$/.test(title);
 
 export const installUnreadReengagement = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') return () => {};
