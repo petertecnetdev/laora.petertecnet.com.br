@@ -72,9 +72,10 @@ function installSavedProfileHandoff(form) {
       if (!saved || !complete) return;
       try {
         if (sessionStorage.getItem(HANDOFF_EVENT_KEY)) { stop(); return; }
-        sessionStorage.setItem(HANDOFF_EVENT_KEY, '1');
       } catch { /* Handoff remains best-effort when storage is unavailable. */ }
-      if (openDiscovery('saved_profile')) stop();
+      if (!openDiscovery('saved_profile')) return;
+      try { sessionStorage.setItem(HANDOFF_EVENT_KEY, '1'); } catch { /* Navigation already succeeded. */ }
+      stop();
     };
     const observer = new MutationObserver(tryHandoff);
     observer.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] });
