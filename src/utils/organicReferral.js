@@ -68,23 +68,43 @@ const shareInvite = async () => {
   }
 };
 
-const enhanceEmptyDiscovery = () => {
+const EMPTY_STATES = [
+  {
+    matches: (text) => text.includes('Ninguém novo por enquanto'),
+    hint: 'Quanto mais gente da sua região entrar, maiores as chances de novas conexões.',
+    button: 'Convidar alguém para o Laora',
+    placement: 'empty_discovery',
+  },
+  {
+    matches: (text) => text.includes('Seus próximos matches vão aparecer aqui'),
+    hint: 'Convide pessoas para aumentar a comunidade e criar mais oportunidades de match para todos.',
+    button: 'Convidar pessoas para o Laora',
+    placement: 'empty_matches',
+  },
+];
+
+const enhanceReferralOpportunities = () => {
   document.querySelectorAll('.p-empty').forEach((container) => {
     if (container.hasAttribute(INVITE_MARKER)) return;
-    if (!container.textContent?.includes('Ninguém novo por enquanto')) return;
+    const text = container.textContent || '';
+    const state = EMPTY_STATES.find((candidate) => candidate.matches(text));
+    if (!state) return;
 
-    container.setAttribute(INVITE_MARKER, '1');
+    container.setAttribute(INVITE_MARKER, state.placement);
     const hint = document.createElement('p');
-    hint.textContent = 'Quanto mais gente da sua região entrar, maiores as chances de novas conexões.';
+    hint.textContent = state.hint;
 
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'p-button';
-    button.textContent = 'Convidar alguém para o Laora';
-    button.addEventListener('click', shareInvite);
+    button.textContent = state.button;
+    button.addEventListener('click', () => {
+      recordFunnelEvent('acquisition_referral_clicked', 'acquisition', false);
+      shareInvite();
+    });
 
     container.append(hint, button);
-    recordFunnelEvent('acquisition_referral_prompt_viewed', 'acquisition', true);
+    recordFunnelEvent(`acquisition_referral_prompt_viewed_${state.placement}`, 'acquisition', true);
   });
 };
 
@@ -102,8 +122,8 @@ const showInviteToast = (message, type) => {
 export const installOrganicReferralLoop = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
-  enhanceEmptyDiscovery();
-  const observer = new MutationObserver(enhanceEmptyDiscovery);
+  enhanceReferralOpportunities();
+  const observer = new MutationObserver(enhanceReferralOpportunities);
   observer.observe(document.documentElement, { childList: true, subtree: true });
 
   const copied = () => showInviteToast('Convite copiado. Compartilhe com alguém da sua região.', 'success');
