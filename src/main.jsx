@@ -20,6 +20,7 @@ import { installAuthDeepLinks } from './utils/authDeepLinks';
 import { installRouteSeo } from './utils/routeSeo';
 import { installUnreadReengagement } from './utils/unreadReengagement';
 import { installVerificationGate } from './utils/verificationGate';
+import { installFirstMessageStarters } from './utils/firstMessageStarters';
 import './styles.css';
 import './nexus-mobile-nav.css';
 import './processing.css';
@@ -43,6 +44,7 @@ installAuthDeepLinks();
 installRouteSeo();
 installUnreadReengagement();
 installVerificationGate();
+installFirstMessageStarters();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
