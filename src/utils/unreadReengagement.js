@@ -1,5 +1,7 @@
 const UNREAD_TITLE_MARKER = ' · Laora';
 const UNREAD_NOTIFICATION_TAG = 'laora-unread-messages';
+const MATCHES_DEEP_LINK_PARAM = 'laora';
+const MATCHES_DEEP_LINK_VALUE = 'matches';
 
 const readUnreadCount = (root = document) => {
   const navButtons = [...root.querySelectorAll('.p-top nav button')];
@@ -26,7 +28,7 @@ const notifyUnreadIncrease = async (unread, previousUnread) => {
       badge: '/pwa-icon.svg',
       tag: UNREAD_NOTIFICATION_TAG,
       renotify: true,
-      data: { url: '/' },
+      data: { url: `/?${MATCHES_DEEP_LINK_PARAM}=${MATCHES_DEEP_LINK_VALUE}` },
     });
   } catch {
     // Notification failures must never interfere with chat or navigation.
@@ -42,6 +44,19 @@ export const installUnreadReengagement = () => {
   let bootstrapObserver = null;
   let baseTitle = document.title;
   let previousUnread = null;
+
+  const openRequestedMatches = () => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get(MATCHES_DEEP_LINK_PARAM) !== MATCHES_DEEP_LINK_VALUE) return false;
+    const matchesButton = [...document.querySelectorAll('.p-top nav button')]
+      .find((button) => button.textContent?.includes('Matches'));
+    if (!matchesButton) return false;
+    matchesButton.click();
+    params.delete(MATCHES_DEEP_LINK_PARAM);
+    const query = params.toString();
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+    return true;
+  };
 
   const applyUnreadTitle = () => {
     const unread = readUnreadCount();
@@ -77,6 +92,7 @@ export const installUnreadReengagement = () => {
     observedNav = nav;
     bootstrapObserver?.disconnect();
     bootstrapObserver = null;
+    openRequestedMatches();
     schedule();
     return true;
   };
