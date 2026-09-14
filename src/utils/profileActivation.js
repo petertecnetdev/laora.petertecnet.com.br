@@ -2,6 +2,7 @@ import { recordFunnelEvent } from '../services/api';
 
 const HOST_ATTR = 'data-laora-profile-activation';
 const COMPLETE_EVENT_KEY = 'peter:laora:profile-activation-complete';
+const HANDOFF_EVENT_KEY = 'peter:laora:profile-activation-handoff';
 const PROFILE_FORM_SELECTOR = 'form.p-form';
 
 function requiredFields(form) {
@@ -49,14 +50,37 @@ function focusStep(step) {
   recordFunnelEvent('activation_profile_recovery_clicked', 'activation');
 }
 
-function openDiscovery() {
+function openDiscovery(source = 'manual') {
   const discoveryButton = Array.from(document.querySelectorAll('.p-top nav button')).find(
     (button) => button.textContent?.includes('Descobrir'),
   );
-  if (!discoveryButton) return;
-  recordFunnelEvent('activation_discovery_handoff_clicked', 'activation');
+  if (!discoveryButton) return false;
+  recordFunnelEvent(source === 'saved_profile' ? 'activation_discovery_handoff_automatic' : 'activation_discovery_handoff_clicked', 'activation');
   discoveryButton.click();
   window.scrollTo?.({ top: 0, behavior: 'smooth' });
+  return true;
+}
+
+function installSavedProfileHandoff(form) {
+  form.addEventListener('submit', () => {
+    let stopped = false;
+    const stop = () => { stopped = true; observer.disconnect(); window.clearTimeout(timeout); };
+    const tryHandoff = () => {
+      if (stopped || !document.body.contains(form)) return;
+      const saved = Array.from(document.querySelectorAll('.p-toast')).some((toast) => toast.textContent?.includes('Perfil salvo'));
+      const complete = activationSteps(form).every((step) => step.ready);
+      if (!saved || !complete) return;
+      try {
+        if (sessionStorage.getItem(HANDOFF_EVENT_KEY)) { stop(); return; }
+        sessionStorage.setItem(HANDOFF_EVENT_KEY, '1');
+      } catch { /* Handoff remains best-effort when storage is unavailable. */ }
+      if (openDiscovery('saved_profile')) stop();
+    };
+    const observer = new MutationObserver(tryHandoff);
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] });
+    const timeout = window.setTimeout(stop, 15000);
+    tryHandoff();
+  });
 }
 
 function enhance(form) {
@@ -82,7 +106,7 @@ function enhance(form) {
     label.textContent = missing ? `${percent}% pronto · ${missing.label}` : '100% pronto para descoberta';
     button.hidden = false;
     button.textContent = missing ? 'Continuar preenchimento' : 'Começar a descobrir';
-    button.onclick = missing ? () => focusStep(missing) : openDiscovery;
+    button.onclick = missing ? () => focusStep(missing) : () => openDiscovery('manual');
 
     if (!missing) {
       host.classList.add('complete');
@@ -98,6 +122,7 @@ function enhance(form) {
   form.prepend(host);
   form.addEventListener('input', update);
   form.addEventListener('change', update);
+  installSavedProfileHandoff(form);
 
   const page = form.closest('.p-page');
   const observer = new MutationObserver(update);
