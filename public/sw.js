@@ -29,6 +29,19 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      const existingClient = windowClients.find((client) => 'focus' in client);
+      if (existingClient) return existingClient.focus();
+      return self.clients.openWindow(targetUrl);
+    }),
+  );
+});
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
