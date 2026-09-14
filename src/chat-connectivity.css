@@ -1,0 +1,22 @@
+.p-chat-connectivity-notice {
+  margin: 0;
+  padding: 10px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 183, 77, 0.12);
+  font-size: 0.84rem;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.p-chat-connectivity-notice[hidden] {
+  display: none;
+}
+
+.p-chat-offline form {
+  opacity: 0.72;
+}
+
+.p-chat-offline form input,
+.p-chat-offline form button {
+  cursor: not-allowed;
+}
