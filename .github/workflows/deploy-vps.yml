@@ -24,3 +24,23 @@ jobs:
       VPS_PORT: ${{ secrets.VPS_PORT }}
       VPS_USER: ${{ secrets.VPS_USER }}
       VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+
+  verify-release:
+    name: Verify deployed release SHA
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Confirm production serves this commit
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          RELEASE_SHA_URL: https://laora.petertecnet.com.br/release-sha.txt
+        run: |
+          set -euo pipefail
+          actual_sha="$(curl --fail --silent --show-error --location --retry 8 --retry-all-errors --retry-delay 3 --max-time 20 "$RELEASE_SHA_URL" | tr -d '\r\n')"
+          if [[ "$actual_sha" != "$EXPECTED_SHA" ]]; then
+            echo "Production release mismatch: expected $EXPECTED_SHA, got ${actual_sha:-<empty>}." >&2
+            exit 42
+          fi
+          echo "Production release verified: $actual_sha"
