@@ -139,7 +139,7 @@ api.interceptors.response.use(
       await new Promise((resolve) => window.setTimeout(resolve, retryDelayMs));
       return api.request(config);
     }
-    if (status === 401 && !String(config?.url || '').includes('/auth/login')) { try { ['token', 'access_token', 'auth_token', 'user'].forEach((key) => window.localStorage.removeItem(key)); } catch { /* noop */ } window.dispatchEvent(new Event('authChanged')); }
+    if (status === 401 && !String(config?.url || '').includes('/auth/login')) { try { ['token', 'access_token', 'auth_token', 'user'].forEach((key) => window.localStorage.removeItem(key)); } catch { /* noop */ } window.dispatchEvent(new Event('authChanged')); window.location.reload(); }
     return Promise.reject(error);
   },
 );
