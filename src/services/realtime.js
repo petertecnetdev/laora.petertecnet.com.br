@@ -35,7 +35,10 @@ export function createLaoraRealtime(userId, onEvent) {
     });
 
     const channel = echo.private(`laora.user.${userId}`);
-    channel.listen('.laora.event', onEvent);
+    channel.listen('.laora.event', (event) => {
+      onEvent(event);
+      window.dispatchEvent(new CustomEvent('laora:realtime', { detail: event }));
+    });
 
     return () => {
       try { echo.leave(`laora.user.${userId}`); } catch { /* noop */ }
