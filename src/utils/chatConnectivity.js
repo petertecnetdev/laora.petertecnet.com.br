@@ -27,11 +27,10 @@ const syncChatConnectivity = () => {
     : '';
 
   if (offline) {
-    input.dataset.connectivityDisabled = input.disabled ? 'existing' : 'managed';
-    button.dataset.connectivityDisabled = button.disabled ? 'existing' : 'managed';
+    if (!input.disabled) input.dataset.connectivityDisabled = 'managed';
+    if (!button.disabled) button.dataset.connectivityDisabled = 'managed';
     input.disabled = true;
     button.disabled = true;
-    input.setAttribute('aria-describedby', '');
   } else {
     if (input.dataset.connectivityDisabled === 'managed') input.disabled = false;
     if (button.dataset.connectivityDisabled === 'managed') button.disabled = false;
