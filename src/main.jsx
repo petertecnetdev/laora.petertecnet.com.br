@@ -21,6 +21,7 @@ import { installRouteSeo } from './utils/routeSeo';
 import { installUnreadReengagement } from './utils/unreadReengagement';
 import { installVerificationGate } from './utils/verificationGate';
 import { installFirstMessageStarters } from './utils/firstMessageStarters';
+import { installChatAutoScroll } from './utils/chatAutoScroll';
 import './styles.css';
 import './nexus-mobile-nav.css';
 import './processing.css';
@@ -45,6 +46,7 @@ installRouteSeo();
 installUnreadReengagement();
 installVerificationGate();
 installFirstMessageStarters();
+installChatAutoScroll();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
