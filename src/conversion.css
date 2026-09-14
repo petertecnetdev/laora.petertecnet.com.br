@@ -27,6 +27,30 @@
   font-size: .88rem;
 }
 
+.p-first-message-starters {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.p-first-message-starters::-webkit-scrollbar { display: none; }
+.p-first-message-starters small { align-self: center; flex: 0 0 auto; color: var(--muted); font-weight: 700; }
+.p-first-message-starters button {
+  flex: 0 0 auto;
+  max-width: min(300px, 78vw);
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .06);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.p-first-message-starters button:hover,
+.p-first-message-starters button:focus-visible { border-color: var(--violet); background: rgba(139, 92, 246, .12); }
+
 @media (max-width: 620px) {
   .p-auth-card:has(.google-wrap) > .p-link:last-of-type {
     width: 100%;
