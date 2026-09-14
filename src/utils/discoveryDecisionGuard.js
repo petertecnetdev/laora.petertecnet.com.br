@@ -1,5 +1,6 @@
 const CARD_SELECTOR = '.p-dating-card';
 const ACTION_SELECTOR = '.p-pass, .p-like';
+const ERROR_TOAST_SELECTOR = '.p-toast.error';
 const LOCK_ATTR = 'data-laora-decision-pending';
 const LOCK_TIMEOUT_MS = 15000;
 
@@ -43,8 +44,15 @@ export function installDiscoveryDecisionGuard() {
     timer = window.setTimeout(unlock, LOCK_TIMEOUT_MS);
   };
 
-  const observer = new MutationObserver(() => {
-    if (lockedCard && !document.body.contains(lockedCard)) unlock();
+  const observer = new MutationObserver((mutations) => {
+    if (!lockedCard) return;
+    if (!document.body.contains(lockedCard)) { unlock(); return; }
+
+    const hasDecisionError = mutations.some((mutation) => [...mutation.addedNodes].some((node) => (
+      node.nodeType === Node.ELEMENT_NODE
+      && (node.matches?.(ERROR_TOAST_SELECTOR) || node.querySelector?.(ERROR_TOAST_SELECTOR))
+    )));
+    if (hasDecisionError) unlock();
   });
 
   document.addEventListener('click', onClick, true);
