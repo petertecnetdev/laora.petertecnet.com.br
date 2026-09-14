@@ -108,6 +108,11 @@ const enhanceReferralOpportunities = () => {
   });
 };
 
+const containsReferralOpportunity = (node) => {
+  if (!(node instanceof Element)) return false;
+  return node.matches('.p-empty') || Boolean(node.querySelector('.p-empty'));
+};
+
 const showInviteToast = (message, type) => {
   const existing = document.querySelector('[data-laora-invite-toast]');
   if (existing) existing.remove();
@@ -123,7 +128,19 @@ export const installOrganicReferralLoop = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
   enhanceReferralOpportunities();
-  const observer = new MutationObserver(enhanceReferralOpportunities);
+  let scheduled = false;
+  const scheduleEnhancement = () => {
+    if (scheduled) return;
+    scheduled = true;
+    window.requestAnimationFrame(() => {
+      scheduled = false;
+      enhanceReferralOpportunities();
+    });
+  };
+  const observer = new MutationObserver((mutations) => {
+    const relevant = mutations.some((mutation) => Array.from(mutation.addedNodes).some(containsReferralOpportunity));
+    if (relevant) scheduleEnhancement();
+  });
   observer.observe(document.documentElement, { childList: true, subtree: true });
 
   const copied = () => showInviteToast('Convite copiado. Compartilhe com alguém da sua região.', 'success');
