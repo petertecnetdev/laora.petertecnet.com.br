@@ -1,4 +1,5 @@
 const UNREAD_TITLE_MARKER = ' · Laora';
+const UNREAD_NOTIFICATION_TAG = 'laora-unread-messages';
 
 const readUnreadCount = (root = document) => {
   const navButtons = [...root.querySelectorAll('.p-top nav button')];
@@ -10,6 +11,28 @@ const readUnreadCount = (root = document) => {
 
 const isUnreadTitle = (title) => /^\(\d+\) (?:nova mensagem|novas mensagens) · Laora$/.test(title);
 
+const notifyUnreadIncrease = async (unread, previousUnread) => {
+  if (!document.hidden || previousUnread === null || unread <= previousUnread) return;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (!('serviceWorker' in navigator)) return;
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    await registration.showNotification('Nova mensagem na Laora', {
+      body: unread === 1
+        ? 'Você recebeu uma nova mensagem.'
+        : `Você tem ${unread} mensagens não lidas.`,
+      icon: '/pwa-icon.svg',
+      badge: '/pwa-icon.svg',
+      tag: UNREAD_NOTIFICATION_TAG,
+      renotify: true,
+      data: { url: '/' },
+    });
+  } catch {
+    // Notification failures must never interfere with chat or navigation.
+  }
+};
+
 export const installUnreadReengagement = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') return () => {};
 
@@ -18,6 +41,7 @@ export const installUnreadReengagement = () => {
   let observedNav = null;
   let bootstrapObserver = null;
   let baseTitle = document.title;
+  let previousUnread = null;
 
   const applyUnreadTitle = () => {
     const unread = readUnreadCount();
@@ -25,6 +49,9 @@ export const installUnreadReengagement = () => {
 
     // Keep route/SEO context if another part of the SPA changed the page title.
     if (!isUnreadTitle(currentTitle)) baseTitle = currentTitle;
+
+    void notifyUnreadIncrease(unread, previousUnread);
+    previousUnread = unread;
 
     document.title = unread > 0
       ? `(${unread}) ${unread === 1 ? 'nova mensagem' : 'novas mensagens'}${UNREAD_TITLE_MARKER}`
@@ -60,6 +87,7 @@ export const installUnreadReengagement = () => {
     observedNav = null;
     bootstrapObserver?.disconnect();
     bootstrapObserver = null;
+    previousUnread = null;
 
     if (!isUnreadTitle(document.title)) baseTitle = document.title;
 
