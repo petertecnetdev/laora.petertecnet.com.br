@@ -38,7 +38,11 @@ jobs:
           RELEASE_SHA_URL: https://laora.petertecnet.com.br/release-sha.txt
         run: |
           set -euo pipefail
-          actual_sha="$(curl --fail --silent --show-error --location --retry 8 --retry-all-errors --retry-delay 3 --max-time 20 "$RELEASE_SHA_URL" | tr -d '\r\n')"
+          cache_bust="$(date +%s%N)"
+          actual_sha="$(curl --fail --silent --show-error --location --retry 8 --retry-all-errors --retry-delay 3 --max-time 20 \
+            --header 'Cache-Control: no-cache, no-store, max-age=0' \
+            --header 'Pragma: no-cache' \
+            "${RELEASE_SHA_URL}?verify=${cache_bust}" | tr -d '\r\n')"
           if [[ "$actual_sha" != "$EXPECTED_SHA" ]]; then
             echo "Production release mismatch: expected $EXPECTED_SHA, got ${actual_sha:-<empty>}." >&2
             exit 42
