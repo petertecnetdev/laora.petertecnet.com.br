@@ -103,6 +103,11 @@ export const recordFunnelEvent = (type, funnel, dedupe = false) => {
 };
 
 const isVerificationResend = (config) => String(config?.method || '').toLowerCase() === 'post' && String(config?.url || '').includes('/auth/resend-code-email-verification');
+const isAuthenticationAttempt = (config) => {
+  const method = String(config?.method || '').toLowerCase();
+  const path = String(config?.url || '').split('?')[0];
+  return method === 'post' && ['/auth/login', '/auth/google'].some((endpoint) => path.endsWith(endpoint));
+};
 const isMultipartUpload = (config) => typeof FormData !== 'undefined' && config?.data instanceof FormData && ['post', 'put', 'patch'].includes(String(config?.method || '').toLowerCase());
 const api = axios.create({ baseURL: API_URL, timeout: DEFAULT_TIMEOUT_MS, headers: { Accept: 'application/json', 'X-Peter-App': APP_SLUG } });
 
@@ -139,7 +144,7 @@ api.interceptors.response.use(
       await new Promise((resolve) => window.setTimeout(resolve, retryDelayMs));
       return api.request(config);
     }
-    if (status === 401 && !String(config?.url || '').includes('/auth/login')) { try { ['token', 'access_token', 'auth_token', 'user'].forEach((key) => window.localStorage.removeItem(key)); } catch { /* noop */ } window.dispatchEvent(new Event('authChanged')); window.location.reload(); }
+    if (status === 401 && !isAuthenticationAttempt(config)) { try { ['token', 'access_token', 'auth_token', 'user'].forEach((key) => window.localStorage.removeItem(key)); } catch { /* noop */ } window.dispatchEvent(new Event('authChanged')); window.location.reload(); }
     return Promise.reject(error);
   },
 );
