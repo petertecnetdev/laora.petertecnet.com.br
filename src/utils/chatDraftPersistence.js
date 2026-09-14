@@ -37,9 +37,17 @@ const enhanceChat = (chat) => {
 
   input.addEventListener('input', persist);
   form.addEventListener('submit', () => {
-    // React clears the controlled input only after send() resolves. A failed
-    // request keeps the value, so this delayed check preserves failed drafts.
-    window.setTimeout(persist, 0);
+    const submittedValue = input.value;
+    let checks = 0;
+    const watchSend = window.setInterval(() => {
+      checks += 1;
+      if (!input.isConnected || !input.value) {
+        window.clearInterval(watchSend);
+        persist();
+        return;
+      }
+      if (input.value !== submittedValue || checks >= 80) window.clearInterval(watchSend);
+    }, 250);
   });
 };
 
