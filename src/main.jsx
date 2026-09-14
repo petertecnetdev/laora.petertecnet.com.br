@@ -19,6 +19,7 @@ import { installOrganicReferralLoop } from './utils/organicReferral';
 import { installAuthDeepLinks } from './utils/authDeepLinks';
 import { installRouteSeo } from './utils/routeSeo';
 import { installUnreadReengagement } from './utils/unreadReengagement';
+import { installVerificationGate } from './utils/verificationGate';
 import './styles.css';
 import './nexus-mobile-nav.css';
 import './processing.css';
@@ -41,6 +42,7 @@ installOrganicReferralLoop();
 installAuthDeepLinks();
 installRouteSeo();
 installUnreadReengagement();
+installVerificationGate();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
