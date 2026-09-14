@@ -23,18 +23,16 @@ const syncChatConnectivity = () => {
   chat.classList.toggle(OFFLINE_CLASS, offline);
   notice.hidden = !offline;
   notice.textContent = offline
-    ? 'Você está sem internet. Sua mensagem foi preservada e poderá ser enviada quando a conexão voltar.'
+    ? 'Você está sem internet. Continue escrevendo: seu rascunho será preservado e poderá ser enviado quando a conexão voltar.'
     : '';
 
   if (offline) {
-    if (!input.disabled) input.dataset.connectivityDisabled = 'managed';
+    // Keep the composer editable while offline. Draft persistence protects the
+    // user's text; only network-dependent submission needs to be blocked.
     if (!button.disabled) button.dataset.connectivityDisabled = 'managed';
-    input.disabled = true;
     button.disabled = true;
   } else {
-    if (input.dataset.connectivityDisabled === 'managed') input.disabled = false;
     if (button.dataset.connectivityDisabled === 'managed') button.disabled = false;
-    delete input.dataset.connectivityDisabled;
     delete button.dataset.connectivityDisabled;
   }
 };
