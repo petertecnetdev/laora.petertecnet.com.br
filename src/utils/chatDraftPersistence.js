@@ -15,9 +15,10 @@ const draftKeyFor = (chat) => {
 
 const enhanceChat = (chat) => {
   if (!chat || chat.dataset.draftPersistence === '1') return;
-  const input = chat.querySelector('form input');
+  const form = chat.querySelector('form');
+  const input = form?.querySelector('input');
   const key = draftKeyFor(chat);
-  if (!input || !key) return;
+  if (!form || !input || !key) return;
 
   chat.dataset.draftPersistence = '1';
 
@@ -35,6 +36,11 @@ const enhanceChat = (chat) => {
   };
 
   input.addEventListener('input', persist);
+  form.addEventListener('submit', () => {
+    // React clears the controlled input only after send() resolves. A failed
+    // request keeps the value, so this delayed check preserves failed drafts.
+    window.setTimeout(persist, 0);
+  });
 };
 
 export const installChatDraftPersistence = () => {
