@@ -120,11 +120,20 @@ function enhance() {
 export function installDiscoveryRecovery() {
   let timer = null;
   const schedule = () => {
-    window.clearTimeout(timer);
-    timer = window.setTimeout(enhance, 60);
+    if (timer !== null) return;
+    timer = window.setTimeout(() => {
+      timer = null;
+      enhance();
+    }, 60);
   };
 
-  const observer = new MutationObserver(schedule);
+  const observer = new MutationObserver((mutations) => {
+    const hasRelevantNode = mutations.some(({ addedNodes }) => Array.from(addedNodes).some((node) => {
+      if (!(node instanceof Element)) return false;
+      return node.matches('.p-empty') || node.querySelector('.p-empty');
+    }));
+    if (hasRelevantNode) schedule();
+  });
   observer.observe(document.body, { childList: true, subtree: true });
   schedule();
 
