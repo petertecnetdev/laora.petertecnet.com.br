@@ -24,8 +24,8 @@ const enhanceChat = (chatMain) => {
     const addedMessages = mutations.flatMap((mutation) => [...mutation.addedNodes])
       .filter((node) => node instanceof Element)
       .flatMap((node) => [
-        ...(node.matches?.(MESSAGE_SELECTOR) ? [node] : []),
-        ...node.querySelectorAll?.(MESSAGE_SELECTOR) || [],
+        ...(node.matches(MESSAGE_SELECTOR) ? [node] : []),
+        ...Array.from(node.querySelectorAll(MESSAGE_SELECTOR)),
       ]);
 
     if (!addedMessages.length) return;
