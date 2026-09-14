@@ -1,4 +1,4 @@
-const CACHE_NAME = 'laora-shell-v4';
+const CACHE_NAME = 'laora-shell-v5';
 const APP_SHELL = ['/', '/pwa-icon.svg'];
 const NETWORK_FIRST_PATHS = new Set(['/manifest.json', '/sw.js']);
 const NAVIGATION_TIMEOUT_MS = 4500;
@@ -31,13 +31,22 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || '/';
+  const targetUrl = new URL(event.notification.data?.url || '/', self.location.origin);
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      const existingClient = windowClients.find((client) => 'focus' in client);
-      if (existingClient) return existingClient.focus();
-      return self.clients.openWindow(targetUrl);
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (windowClients) => {
+      const sameOriginClient = windowClients.find((client) => {
+        try { return new URL(client.url).origin === self.location.origin; } catch { return false; }
+      });
+
+      if (sameOriginClient) {
+        if ('navigate' in sameOriginClient && sameOriginClient.url !== targetUrl.href) {
+          try { await sameOriginClient.navigate(targetUrl.href); } catch { /* fall back to focusing the existing client */ }
+        }
+        return sameOriginClient.focus();
+      }
+
+      return self.clients.openWindow(targetUrl.href);
     }),
   );
 });
