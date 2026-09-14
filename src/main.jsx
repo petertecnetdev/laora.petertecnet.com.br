@@ -24,6 +24,7 @@ import { installFirstMessageStarters } from './utils/firstMessageStarters';
 import { installChatAutoScroll } from './utils/chatAutoScroll';
 import { installChatConnectivity } from './utils/chatConnectivity';
 import { installActiveChatReadSync } from './utils/activeChatReadSync';
+import { installChatDraftPersistence } from './utils/chatDraftPersistence';
 import './styles.css';
 import './nexus-mobile-nav.css';
 import './processing.css';
@@ -52,6 +53,7 @@ installFirstMessageStarters();
 installChatAutoScroll();
 installChatConnectivity();
 installActiveChatReadSync();
+installChatDraftPersistence();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
