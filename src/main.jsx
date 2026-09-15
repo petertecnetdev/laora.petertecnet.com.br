@@ -25,6 +25,7 @@ import { installChatAutoScroll } from './utils/chatAutoScroll';
 import { installChatConnectivity } from './utils/chatConnectivity';
 import { installActiveChatReadSync } from './utils/activeChatReadSync';
 import { installChatDraftPersistence } from './utils/chatDraftPersistence';
+import { installAuthFunnelVisibility } from './utils/authFunnelVisibility';
 import './styles.css';
 import './nexus-mobile-nav.css';
 import './processing.css';
@@ -54,6 +55,7 @@ installChatAutoScroll();
 installChatConnectivity();
 installActiveChatReadSync();
 installChatDraftPersistence();
+installAuthFunnelVisibility();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
