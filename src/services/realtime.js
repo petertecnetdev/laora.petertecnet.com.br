@@ -1,9 +1,41 @@
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
+import api from './api';
 
 window.Pusher = Pusher;
 
 let echo = null;
+const realtimeMessages = new Map();
+
+const messageKey = (matchId, messageId) => `${String(matchId)}:${String(messageId)}`;
+
+const rememberRealtimeMessage = (event) => {
+  if (event?.type !== 'message.created' || !event?.payload?.match_id || !event?.payload?.message?.id) return;
+  realtimeMessages.set(messageKey(event.payload.match_id, event.payload.message.id), {
+    matchId: String(event.payload.match_id),
+    message: event.payload.message,
+    receivedAt: Date.now(),
+  });
+  const cutoff = Date.now() - 5 * 60 * 1000;
+  realtimeMessages.forEach((entry, key) => { if (entry.receivedAt < cutoff) realtimeMessages.delete(key); });
+};
+
+const mergeRealtimeMessages = (response) => {
+  const url = String(response?.config?.url || '').split('?')[0];
+  const match = url.match(/\/connections\/matches\/([^/]+)\/messages$/);
+  if (!match || !Array.isArray(response?.data?.data)) return response;
+  const matchId = String(match[1]);
+  const merged = new Map(response.data.data.map((message) => [String(message.id), message]));
+  realtimeMessages.forEach((entry) => { if (entry.matchId === matchId) merged.set(String(entry.message.id), entry.message); });
+  response.data.data = [...merged.values()].sort((a, b) => {
+    const aId = Number(a.id); const bId = Number(b.id);
+    if (Number.isFinite(aId) && Number.isFinite(bId)) return aId - bId;
+    return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+  });
+  return response;
+};
+
+api.interceptors.response.use(mergeRealtimeMessages);
 
 export function createLaoraRealtime(userId, onEvent) {
   const key = import.meta.env.VITE_REVERB_APP_KEY;
@@ -36,6 +68,7 @@ export function createLaoraRealtime(userId, onEvent) {
 
     const channel = echo.private(`laora.user.${userId}`);
     channel.listen('.laora.event', (event) => {
+      rememberRealtimeMessage(event);
       onEvent(event);
       window.dispatchEvent(new CustomEvent('laora:realtime', { detail: event }));
     });
