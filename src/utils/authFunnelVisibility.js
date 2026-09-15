@@ -18,12 +18,22 @@ const SUBMIT_EVENT = {
 
 const titleFor = (root) => root?.querySelector('.p-auth-card h2')?.textContent?.trim() || '';
 
+const touchesAuth = (mutation) => {
+  if (mutation.target instanceof Element && mutation.target.closest('.p-auth')) return true;
+  return [...mutation.addedNodes, ...mutation.removedNodes].some((node) =>
+    node instanceof Element && (node.matches('.p-auth') || node.querySelector('.p-auth'))
+  );
+};
+
 export const installAuthFunnelVisibility = () => {
   let lastMode = '';
 
   const inspect = () => {
     const root = document.querySelector('.p-auth');
-    if (!root) return;
+    if (!root) {
+      lastMode = '';
+      return;
+    }
     const mode = titleFor(root);
     if (!mode || mode === lastMode) return;
     lastMode = mode;
@@ -44,7 +54,9 @@ export const installAuthFunnelVisibility = () => {
     window.setTimeout(inspect, 0);
   }, true);
 
-  const observer = new MutationObserver(inspect);
+  const observer = new MutationObserver((mutations) => {
+    if (mutations.some(touchesAuth)) inspect();
+  });
   observer.observe(document.documentElement, { childList: true, subtree: true });
   inspect();
 };
