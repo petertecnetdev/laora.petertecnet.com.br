@@ -3,6 +3,7 @@ import api, { recordFunnelEvent } from '../services/api';
 const APP_SLUG = import.meta.env.VITE_APP_SLUG || 'laora';
 const SESSION_KEY = `peter:${APP_SLUG}:revenue-intent-exposed`;
 const CTA_ID = `${APP_SLUG}-premium-interest-cta`;
+const PIX_DIALOG_ID = `${APP_SLUG}-premium-pix-dialog`;
 let offerPromise = null;
 let checkoutBusy = false;
 
@@ -57,15 +58,82 @@ const idempotencyKey = () => {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 };
 
+const showPixDialog = (qrCode) => {
+  document.getElementById(PIX_DIALOG_ID)?.remove();
+
+  const backdrop = document.createElement('div');
+  backdrop.id = PIX_DIALOG_ID;
+  backdrop.setAttribute('role', 'dialog');
+  backdrop.setAttribute('aria-modal', 'true');
+  backdrop.setAttribute('aria-labelledby', `${PIX_DIALOG_ID}-title`);
+  backdrop.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(5,8,18,.78);backdrop-filter:blur(8px);';
+
+  const panel = document.createElement('div');
+  panel.style.cssText = 'width:min(100%,460px);border:1px solid rgba(255,255,255,.14);border-radius:20px;padding:22px;background:#101525;color:#fff;box-shadow:0 24px 80px rgba(0,0,0,.45);';
+
+  const title = document.createElement('h2');
+  title.id = `${PIX_DIALOG_ID}-title`;
+  title.textContent = 'PIX pronto para pagamento';
+  title.style.cssText = 'margin:0 0 8px;font-size:1.2rem;';
+
+  const hint = document.createElement('p');
+  hint.textContent = 'Copie o código abaixo, abra o aplicativo do seu banco e use PIX Copia e Cola.';
+  hint.style.cssText = 'margin:0 0 14px;opacity:.78;line-height:1.45;';
+
+  const code = document.createElement('textarea');
+  code.value = qrCode;
+  code.readOnly = true;
+  code.setAttribute('aria-label', 'Código PIX Copia e Cola');
+  code.style.cssText = 'width:100%;min-height:112px;resize:none;border-radius:12px;border:1px solid rgba(255,255,255,.16);padding:12px;background:#080c17;color:#fff;font:12px/1.45 monospace;box-sizing:border-box;';
+
+  const actions = document.createElement('div');
+  actions.style.cssText = 'display:flex;gap:10px;margin-top:14px;';
+
+  const copy = document.createElement('button');
+  copy.type = 'button';
+  copy.className = 'btn btn-primary';
+  copy.textContent = 'Copiar código PIX';
+  copy.style.cssText = 'flex:1;';
+
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'btn btn-outline-light';
+  close.textContent = 'Fechar';
+
+  const copyCode = async () => {
+    code.focus();
+    code.select();
+    try {
+      await navigator.clipboard?.writeText?.(qrCode);
+      copy.textContent = 'Código copiado';
+      recordFunnelEvent('revenue_premium_pix_code_copied', 'revenue', true);
+    } catch {
+      copy.textContent = 'Código selecionado — copie';
+    }
+  };
+
+  copy.addEventListener('click', copyCode);
+  close.addEventListener('click', () => backdrop.remove());
+  backdrop.addEventListener('click', (event) => {
+    if (event.target === backdrop) backdrop.remove();
+  });
+  backdrop.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') backdrop.remove();
+  });
+
+  actions.append(copy, close);
+  panel.append(title, hint, code, actions);
+  backdrop.append(panel);
+  document.body.append(backdrop);
+  copy.focus();
+};
+
 const exposePixCode = async (qrCode) => {
   if (!qrCode) return false;
-  if (navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(qrCode);
-      return true;
-    } catch { /* Fall through to a selectable copy-and-paste prompt. */ }
-  }
-  window.prompt('Copie o código PIX abaixo e pague no aplicativo do seu banco:', qrCode);
+  showPixDialog(qrCode);
+  try {
+    await navigator.clipboard?.writeText?.(qrCode);
+  } catch { /* The dialog always keeps the PIX code selectable. */ }
   return true;
 };
 
