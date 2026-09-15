@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "check": "node scripts/check-quality.mjs",
     "build": "node scripts/write-build-version.mjs && vite build",
+    "validate": "npm run check && npm run build",
     "preview": "vite preview"
   },
   "dependencies": {
