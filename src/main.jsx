@@ -27,6 +27,7 @@ import { installActiveChatReadSync } from './utils/activeChatReadSync';
 import { installChatDraftPersistence } from './utils/chatDraftPersistence';
 import { installAuthFunnelVisibility } from './utils/authFunnelVisibility';
 import { installLegalLinks } from './utils/legalLinks';
+import { installRevenueIntentMeasurement } from './utils/revenueIntent';
 import './styles.css';
 import './nexus-mobile-nav.css';
 import './processing.css';
@@ -58,6 +59,7 @@ installActiveChatReadSync();
 installChatDraftPersistence();
 installAuthFunnelVisibility();
 installLegalLinks();
+installRevenueIntentMeasurement();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
