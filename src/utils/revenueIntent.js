@@ -57,6 +57,18 @@ const idempotencyKey = () => {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 };
 
+const exposePixCode = async (qrCode) => {
+  if (!qrCode) return false;
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(qrCode);
+      return true;
+    } catch { /* Fall through to a selectable copy-and-paste prompt. */ }
+  }
+  window.prompt('Copie o código PIX abaixo e pague no aplicativo do seu banco:', qrCode);
+  return true;
+};
+
 const checkoutPremium = async (plan, button) => {
   if (!plan?.code || checkoutBusy) return;
   checkoutBusy = true;
@@ -90,9 +102,9 @@ const checkoutPremium = async (plan, button) => {
       window.location.assign(ticketUrl);
       return;
     }
-    if (qrCode && navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(qrCode);
-      button.textContent = 'PIX copiado — pague no seu banco';
+    if (await exposePixCode(qrCode)) {
+      recordFunnelEvent('revenue_premium_pix_code_exposed', 'revenue', true);
+      button.textContent = 'PIX pronto — conclua no seu banco';
       window.setTimeout(() => {
         button.disabled = false;
         button.textContent = original;
