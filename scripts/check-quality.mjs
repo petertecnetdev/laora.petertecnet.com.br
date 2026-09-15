@@ -4,6 +4,7 @@ import path from 'node:path';
 const roots = ['src', 'scripts'];
 const extensions = new Set(['.js', '.jsx', '.mjs', '.css']);
 const failures = [];
+const conflictMarkers = ['<'.repeat(7), '='.repeat(7), '>'.repeat(7)];
 
 async function walk(directory) {
   const entries = await readdir(directory);
@@ -22,7 +23,7 @@ async function check(file) {
     if (/[ \t]+$/.test(line)) failures.push(`${file}:${index + 1}: whitespace no fim da linha`);
     if (line.includes('\t')) failures.push(`${file}:${index + 1}: tab encontrado; use espaços`);
   });
-  if (content.includes('<<<<<<<') || content.includes('=======') || content.includes('>>>>>>>')) {
+  if (conflictMarkers.some((marker) => content.includes(marker))) {
     failures.push(`${file}: marcador de conflito Git encontrado`);
   }
 }
