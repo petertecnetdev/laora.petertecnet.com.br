@@ -13,6 +13,23 @@ const readUnreadCount = (root = document) => {
 
 const isUnreadTitle = (title) => /^\(\d+\) (?:nova mensagem|novas mensagens) · Laora$/.test(title);
 
+const prioritizeUnreadMatches = () => {
+  const grid = document.querySelector('.p-match-grid');
+  if (!grid) return;
+
+  const cards = [...grid.querySelectorAll(':scope > .p-match')];
+  if (cards.length < 2) return;
+
+  const unread = cards.filter((card) => card.querySelector('.p-badge'));
+  if (!unread.length) return;
+
+  const read = cards.filter((card) => !card.querySelector('.p-badge'));
+  const desired = [...unread, ...read];
+  if (desired.every((card, index) => cards[index] === card)) return;
+
+  desired.forEach((card) => grid.appendChild(card));
+};
+
 const notifyUnreadIncrease = async (unread, previousUnread) => {
   if (!document.hidden || previousUnread === null || unread <= previousUnread) return;
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
@@ -42,6 +59,7 @@ export const installUnreadReengagement = () => {
   let navObserver = null;
   let observedNav = null;
   let bootstrapObserver = null;
+  let matchObserver = null;
   let baseTitle = document.title;
   let previousUnread = null;
 
@@ -78,6 +96,7 @@ export const installUnreadReengagement = () => {
     frame = window.requestAnimationFrame(() => {
       frame = null;
       applyUnreadTitle();
+      prioritizeUnreadMatches();
     });
   };
 
@@ -114,6 +133,11 @@ export const installUnreadReengagement = () => {
     schedule();
   };
 
+  matchObserver = new MutationObserver((mutations) => {
+    if (mutations.some((mutation) => mutation.type === 'childList')) schedule();
+  });
+  matchObserver.observe(document.body, { childList: true, subtree: true });
+
   bootstrapNavigation();
   window.addEventListener('authChanged', bootstrapNavigation);
   document.addEventListener('visibilitychange', schedule);
@@ -121,6 +145,7 @@ export const installUnreadReengagement = () => {
   return () => {
     navObserver?.disconnect();
     bootstrapObserver?.disconnect();
+    matchObserver?.disconnect();
     window.removeEventListener('authChanged', bootstrapNavigation);
     document.removeEventListener('visibilitychange', schedule);
     if (frame !== null) window.cancelAnimationFrame(frame);
