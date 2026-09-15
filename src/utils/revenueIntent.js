@@ -2,9 +2,9 @@ import api, { recordFunnelEvent } from '../services/api';
 
 const APP_SLUG = import.meta.env.VITE_APP_SLUG || 'laora';
 const SESSION_KEY = `peter:${APP_SLUG}:revenue-intent-exposed`;
-const INTEREST_KEY = `peter:${APP_SLUG}:premium-interest`;
 const CTA_ID = `${APP_SLUG}-premium-interest-cta`;
 let offerPromise = null;
+let checkoutBusy = false;
 
 const safeSessionGet = (key) => {
   try { return window.sessionStorage.getItem(key); } catch { return null; }
@@ -52,8 +52,69 @@ const loadOffer = async () => {
   return offerPromise;
 };
 
+const idempotencyKey = () => {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+};
+
+const checkoutPremium = async (plan, button) => {
+  if (!plan?.code || checkoutBusy) return;
+  checkoutBusy = true;
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Gerando PIX…';
+  recordFunnelEvent('revenue_premium_checkout_started', 'revenue', true);
+
+  try {
+    const intentKey = idempotencyKey();
+    const intentResponse = await api.post(
+      `/v1/apps/${encodeURIComponent(APP_SLUG)}/subscription-intents`,
+      { plan_code: plan.code, source: 'premium_offer', handoff_channel: 'web' },
+      { headers: { 'Idempotency-Key': intentKey } },
+    );
+    const intent = intentResponse?.data?.data;
+    if (!intent?.id) throw new Error('Não foi possível iniciar a assinatura.');
+
+    const checkoutResponse = await api.post(
+      `/v1/apps/${encodeURIComponent(APP_SLUG)}/subscription-intents/${encodeURIComponent(intent.id)}/checkout`,
+      { method: 'pix' },
+      { headers: { 'Idempotency-Key': idempotencyKey() } },
+    );
+    const checkout = checkoutResponse?.data;
+    const payment = checkout?.payment || checkout?.data?.payment || checkout;
+    const ticketUrl = payment?.ticket_url || checkout?.ticket_url;
+    const qrCode = payment?.qr_code || checkout?.qr_code;
+
+    recordFunnelEvent('revenue_premium_pix_created', 'revenue', true);
+    if (ticketUrl) {
+      window.location.assign(ticketUrl);
+      return;
+    }
+    if (qrCode && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(qrCode);
+      button.textContent = 'PIX copiado — pague no seu banco';
+      window.setTimeout(() => {
+        button.disabled = false;
+        button.textContent = original;
+        checkoutBusy = false;
+      }, 6000);
+      return;
+    }
+    throw new Error('PIX criado, mas o código de pagamento não foi retornado.');
+  } catch (error) {
+    recordFunnelEvent('revenue_premium_checkout_failed', 'revenue', false);
+    const message = error?.response?.data?.message || error?.message || 'Não foi possível gerar o PIX. Tente novamente.';
+    button.textContent = message.length <= 54 ? message : 'Não foi possível gerar o PIX. Tente novamente.';
+    window.setTimeout(() => {
+      button.disabled = false;
+      button.textContent = original;
+      checkoutBusy = false;
+    }, 4500);
+  }
+};
+
 const ensureInterestCta = async () => {
-  if (safeSessionGet(INTEREST_KEY) || document.getElementById(CTA_ID)) return;
+  if (document.getElementById(CTA_ID)) return;
   const surface = document.querySelector('.p-discover, .p-matches, .p-chat');
   if (!surface) return;
 
@@ -70,18 +131,21 @@ const ensureInterestCta = async () => {
   if (!button.isConnected) return;
   const price = formatPrice(plan);
   if (plan && price) {
-    button.textContent = `${plan.name || 'Premium'} · ${price}${intervalLabel(plan)}`;
-    button.setAttribute('aria-label', `Conhecer ${plan.name || 'Premium'} por ${price}`);
+    button.textContent = `${plan.name || 'Premium'} · ${price}${intervalLabel(plan)} · pagar com PIX`;
+    button.setAttribute('aria-label', `Assinar ${plan.name || 'Premium'} por ${price} via PIX`);
     recordFunnelEvent('revenue_premium_offer_exposed', 'revenue', true);
   }
 
   button.addEventListener('click', () => {
-    safeSessionSet(INTEREST_KEY, '1');
     recordFunnelEvent(plan ? 'revenue_premium_offer_clicked' : 'revenue_premium_interest_clicked', 'revenue', true);
-    button.textContent = plan ? 'Oferta registrada' : 'Interesse registrado';
+    if (plan) {
+      checkoutPremium(plan, button);
+      return;
+    }
+    button.textContent = 'Oferta temporariamente indisponível';
     button.disabled = true;
-    window.setTimeout(() => button.remove(), 1800);
-  }, { once: true });
+    window.setTimeout(() => button.remove(), 2500);
+  });
 };
 
 const isHighIntentSurface = () => Boolean(
