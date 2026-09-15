@@ -20,7 +20,7 @@ const markExposed = () => {
 
 const ensureInterestCta = () => {
   if (safeSessionGet(INTEREST_KEY) || document.getElementById(CTA_ID)) return;
-  const surface = document.querySelector('.p-discover, .p-matches');
+  const surface = document.querySelector('.p-discover, .p-matches, .p-chat');
   if (!surface) return;
 
   const button = document.createElement('button');
