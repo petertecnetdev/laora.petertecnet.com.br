@@ -162,8 +162,9 @@ const checkoutPremium = async (plan, button) => {
     );
     const checkout = checkoutResponse?.data;
     const payment = checkout?.payment || checkout?.data?.payment || checkout;
-    const ticketUrl = payment?.ticket_url || checkout?.ticket_url;
-    const qrCode = payment?.qr_code || checkout?.qr_code;
+    const pix = payment?.pix || checkout?.pix || checkout?.data?.payment?.pix || {};
+    const ticketUrl = pix?.ticket_url || payment?.ticket_url || checkout?.ticket_url;
+    const qrCode = pix?.qr_code || payment?.qr_code || checkout?.qr_code;
 
     recordFunnelEvent('revenue_premium_pix_created', 'revenue', true);
     if (ticketUrl) {
