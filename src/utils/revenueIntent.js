@@ -58,7 +58,52 @@ const idempotencyKey = () => {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 };
 
-const showPixDialog = (qrCode) => {
+const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+
+const monitorPixPayment = async (intentId, backdrop, title, hint, copy) => {
+  if (!intentId) return;
+
+  for (let attempt = 0; attempt < 15 && backdrop.isConnected; attempt += 1) {
+    await wait(attempt === 0 ? 2500 : 4000);
+    if (!backdrop.isConnected) return;
+
+    try {
+      const response = await api.post(
+        `/v1/apps/${encodeURIComponent(APP_SLUG)}/subscription-intents/${encodeURIComponent(intentId)}/sync`,
+      );
+      const status = response?.data || {};
+      const subscriptionActive = status?.subscription?.status === 'active';
+      const entitlementActive = status?.entitlement?.status === 'active';
+      const paymentPaid = status?.payment?.status === 'paid';
+
+      if (subscriptionActive && entitlementActive) {
+        title.textContent = 'Premium ativado';
+        hint.textContent = 'Pagamento confirmado. Sua assinatura e seus benefícios Premium já estão ativos.';
+        copy.textContent = 'Pagamento confirmado';
+        copy.disabled = true;
+        recordFunnelEvent('revenue_premium_subscription_activated', 'revenue', true);
+        window.setTimeout(() => backdrop.remove(), 2800);
+        return;
+      }
+
+      if (paymentPaid) {
+        title.textContent = 'Pagamento confirmado';
+        hint.textContent = 'Recebemos seu PIX e estamos concluindo a ativação do Premium.';
+      }
+
+      if (['failed', 'cancelled', 'refunded', 'charged_back'].includes(status?.payment?.status)) {
+        title.textContent = 'Pagamento não concluído';
+        hint.textContent = 'Este PIX não pode mais ser concluído. Feche esta janela e gere um novo pagamento.';
+        recordFunnelEvent('revenue_premium_payment_failed', 'revenue', false);
+        return;
+      }
+    } catch {
+      // Webhook reconciliation remains authoritative; transient polling failures are retried quietly.
+    }
+  }
+};
+
+const showPixDialog = (qrCode, intentId) => {
   document.getElementById(PIX_DIALOG_ID)?.remove();
 
   const backdrop = document.createElement('div');
@@ -77,7 +122,7 @@ const showPixDialog = (qrCode) => {
   title.style.cssText = 'margin:0 0 8px;font-size:1.2rem;';
 
   const hint = document.createElement('p');
-  hint.textContent = 'Copie o código abaixo, abra o aplicativo do seu banco e use PIX Copia e Cola.';
+  hint.textContent = 'Copie o código abaixo, abra o aplicativo do seu banco e use PIX Copia e Cola. A confirmação será detectada automaticamente.';
   hint.style.cssText = 'margin:0 0 14px;opacity:.78;line-height:1.45;';
 
   const code = document.createElement('textarea');
@@ -126,11 +171,12 @@ const showPixDialog = (qrCode) => {
   backdrop.append(panel);
   document.body.append(backdrop);
   copy.focus();
+  monitorPixPayment(intentId, backdrop, title, hint, copy);
 };
 
-const exposePixCode = async (qrCode) => {
+const exposePixCode = async (qrCode, intentId) => {
   if (!qrCode) return false;
-  showPixDialog(qrCode);
+  showPixDialog(qrCode, intentId);
   try {
     await navigator.clipboard?.writeText?.(qrCode);
   } catch { /* The dialog always keeps the PIX code selectable. */ }
@@ -171,9 +217,9 @@ const checkoutPremium = async (plan, button) => {
       window.location.assign(ticketUrl);
       return;
     }
-    if (await exposePixCode(qrCode)) {
+    if (await exposePixCode(qrCode, intent.id)) {
       recordFunnelEvent('revenue_premium_pix_code_exposed', 'revenue', true);
-      button.textContent = 'PIX pronto — conclua no seu banco';
+      button.textContent = 'PIX pronto — aguardando pagamento';
       window.setTimeout(() => {
         button.disabled = false;
         button.textContent = original;
