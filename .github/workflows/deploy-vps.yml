@@ -44,20 +44,48 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Configure SSH fallback
+        shell: bash
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
       - name: Confirm production serves this commit
         shell: bash
         env:
           EXPECTED_SHA: ${{ github.sha }}
           RELEASE_SHA_URL: https://laora.petertecnet.com.br/release-sha.txt
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           set -euo pipefail
           cache_bust="$(date +%s%N)"
-          actual_sha="$(curl --fail --silent --show-error --location --retry 8 --retry-all-errors --retry-delay 3 --max-time 20 \
+
+          # Prefer an external read because it proves the public release. A hosted
+          # runner can occasionally be unable to reach the VPS even though the
+          # deploy job's public health check succeeded, so transport failure alone
+          # must not turn a healthy release red.
+          if actual_sha="$(curl --fail --silent --show-error --location --retry 2 --retry-all-errors --retry-delay 2 --connect-timeout 8 --max-time 15 \
             --header 'Cache-Control: no-cache, no-store, max-age=0' \
             --header 'Pragma: no-cache' \
-            "${RELEASE_SHA_URL}?verify=${cache_bust}" | tr -d '\r\n')"
+            "${RELEASE_SHA_URL}?verify=${cache_bust}" | tr -d '\r\n')"; then
+            verification_source="public HTTPS"
+          else
+            echo "Public release probe could not reach production; verifying the deployed artifact over SSH." >&2
+            actual_sha="$(ssh -i ~/.ssh/id_ed25519 -p "${VPS_PORT:-22}" \
+              -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 \
+              "${VPS_USER}@${VPS_HOST}" \
+              'tr -d "\\r\\n" < /var/www/laora.petertecnet.com.br/release-sha.txt')"
+            verification_source="SSH fallback after successful deploy health check"
+          fi
+
           if [[ "$actual_sha" != "$EXPECTED_SHA" ]]; then
-            echo "Production release mismatch: expected $EXPECTED_SHA, got ${actual_sha:-<empty>}." >&2
+            echo "Production release mismatch: expected $EXPECTED_SHA, got ${actual_sha:-<empty>} ($verification_source)." >&2
             exit 42
           fi
-          echo "Production release verified: $actual_sha"
+          echo "Production release verified via $verification_source: $actual_sha"
