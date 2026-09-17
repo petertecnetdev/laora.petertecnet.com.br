@@ -144,7 +144,10 @@ api.interceptors.response.use(
       await new Promise((resolve) => window.setTimeout(resolve, retryDelayMs));
       return api.request(config);
     }
-    if (status === 401 && !isAuthenticationAttempt(config)) { try { ['token', 'access_token', 'auth_token', 'user'].forEach((key) => window.localStorage.removeItem(key)); } catch { /* noop */ } window.dispatchEvent(new Event('authChanged')); window.location.reload(); }
+    if (status === 401 && !isAuthenticationAttempt(config)) {
+      try { ['token', 'access_token', 'auth_token', 'user'].forEach((key) => window.localStorage.removeItem(key)); } catch { /* noop */ }
+      window.dispatchEvent(new CustomEvent('authChanged', { detail: { reason: 'unauthorized' } }));
+    }
     return Promise.reject(error);
   },
 );
