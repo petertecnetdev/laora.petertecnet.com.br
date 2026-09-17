@@ -28,6 +28,7 @@ import { installChatDraftPersistence } from './utils/chatDraftPersistence';
 import { installAuthFunnelVisibility } from './utils/authFunnelVisibility';
 import { installLegalLinks } from './utils/legalLinks';
 import { installRevenueIntentMeasurement } from './utils/revenueIntent';
+import { installEcosystemNavigation } from './utils/ecosystemNavigation';
 import './styles.css';
 import './nexus-mobile-nav.css';
 import './processing.css';
@@ -38,16 +39,9 @@ import './chat-connectivity.css';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.petertecnet.com.br/api';
 const APP_SLUG = import.meta.env.VITE_APP_SLUG || 'laora';
 
-function installEcosystemNavigation() {
-  if (window.PeterTecnetNavigation || document.querySelector('script[data-peter-navigation]')) return;
-  const script = document.createElement('script');
-  script.defer = true;
-  script.dataset.peterNavigation = 'true';
-  script.src = 'https://petertecnet.com.br/ecosystem/peter-navigation-v1.js?v=1.0.0';
-  document.head.appendChild(script);
-}
-
-installEcosystemNavigation();
+installEcosystemNavigation().catch(() => {
+  // The application remains usable when the optional shared navigation is unavailable.
+});
 installGlobalImageFallbacks();
 installPasswordVisibilityToggles();
 installPeterWhatsappFallback();
