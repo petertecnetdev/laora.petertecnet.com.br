@@ -38,6 +38,16 @@ import './chat-connectivity.css';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.petertecnet.com.br/api';
 const APP_SLUG = import.meta.env.VITE_APP_SLUG || 'laora';
 
+function installEcosystemNavigation() {
+  if (window.PeterTecnetNavigation || document.querySelector('script[data-peter-navigation]')) return;
+  const script = document.createElement('script');
+  script.defer = true;
+  script.dataset.peterNavigation = 'true';
+  script.src = 'https://petertecnet.com.br/ecosystem/peter-navigation-v1.js?v=1.0.0';
+  document.head.appendChild(script);
+}
+
+installEcosystemNavigation();
 installGlobalImageFallbacks();
 installPasswordVisibilityToggles();
 installPeterWhatsappFallback();
